@@ -1,0 +1,7 @@
+pynput>=1.7.6
+numpy>=1.24.0
+git+https://github.com/huggingface/lerobot.git
+feetech-servo-sdk>=1.0.0
+pillow>=9.0.0
+mcp[cli]>=0.0.0
+opencv-python>=4.9.0
