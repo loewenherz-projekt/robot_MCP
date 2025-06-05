@@ -153,22 +153,22 @@ def get_robot_state():
     """
         )
 def move_robot(
-    gripper_move_up_mm=None, 
-    gripper_move_forward_mm=None, 
+    move_gripper_up_mm=None, 
+    move_gripper_forward_mm=None, 
     tilt_gripper_down_angle=None, 
     rotate_gripper_clockwise_angle=None, 
     rotate_robot_right_angle=None
 ):
     robot = get_robot()
-    logger.info(f"MCP Tool: move_robot received: up={gripper_move_up_mm}, fwd={gripper_move_forward_mm}, "
+    logger.info(f"MCP Tool: move_robot received: up={move_gripper_up_mm}, fwd={move_gripper_forward_mm}, "
                 f"tilt={tilt_gripper_down_angle}, grip_rot={rotate_gripper_clockwise_angle}, "
                 f"robot_rot={rotate_robot_right_angle}")
 
     # All parameters are optional for execute_intuitive_move
     # Convert MCP tool parameters to match the arguments of execute_intuitive_move
     move_params = {
-        "gripper_move_up_mm": float(gripper_move_up_mm) if gripper_move_up_mm is not None else None,
-        "gripper_move_forward_mm": float(gripper_move_forward_mm) if gripper_move_forward_mm is not None else None,
+        "gripper_move_up_mm": float(move_gripper_up_mm) if move_gripper_up_mm is not None else None,
+        "gripper_move_forward_mm": float(move_gripper_forward_mm) if move_gripper_forward_mm is not None else None,
         "tilt_gripper_down_angle": float(tilt_gripper_down_angle) if tilt_gripper_down_angle is not None else None,
         "rotate_gripper_clockwise_angle": float(rotate_gripper_clockwise_angle) if rotate_gripper_clockwise_angle is not None else None,
         "rotate_robot_clockwise_angle": float(rotate_robot_right_angle) if rotate_robot_right_angle is not None else None,
