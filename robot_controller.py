@@ -402,8 +402,8 @@ class RobotController:
 
     def execute_intuitive_move(
         self,
-        gripper_move_up_mm: Optional[float] = None,
-        gripper_move_forward_mm: Optional[float] = None,
+        move_gripper_up_mm: Optional[float] = None,
+        move_gripper_forward_mm: Optional[float] = None,
         tilt_gripper_down_angle: Optional[float] = None,
         rotate_gripper_clockwise_angle: Optional[float] = None,
         rotate_robot_clockwise_angle: Optional[float] = None,
@@ -416,18 +416,18 @@ class RobotController:
         This is intended for use by keyboard controller and MCP.
         """
         logger.info(f"EXEC_INTUITIVE_MOVE: Start. Current cache pos: {self.current_positions_deg}")
-        logger.info(f"EXEC_INTUITIVE_MOVE: Inputs: up_mm={gripper_move_up_mm}, fwd_mm={gripper_move_forward_mm}, tilt_deg={tilt_gripper_down_angle}, grip_rot_deg={rotate_gripper_clockwise_angle}, robot_rot_deg={rotate_robot_clockwise_angle}")
+        logger.info(f"EXEC_INTUITIVE_MOVE: Inputs: up_mm={move_gripper_up_mm}, fwd_mm={move_gripper_forward_mm}, tilt_deg={tilt_gripper_down_angle}, grip_rot_deg={rotate_gripper_clockwise_angle}, robot_rot_deg={rotate_robot_clockwise_angle}")
 
         overall_warnings: List[str] = []
         final_target_joint_positions = self.current_positions_deg.copy()
         
         # 1. Compute joint positions from cartesian deltas
-        if gripper_move_up_mm is not None or gripper_move_forward_mm is not None:
+        if move_gripper_up_mm is not None or move_gripper_forward_mm is not None:
             calculated_cartesian_joints, _, cart_calc_warnings, cart_calc_error = \
                 self.calculate_target_joint_angles_from_cartesian_deltas(
                     {
-                        'x': gripper_move_forward_mm or 0.0,
-                        'z': gripper_move_up_mm or 0.0
+                        'x': move_gripper_forward_mm or 0.0,
+                        'z': move_gripper_up_mm or 0.0
                     }
                 )
             

@@ -129,15 +129,15 @@ def get_robot_state():
         description="""
         Move the robot with intuitive controls.
         Args:
-            gripper_move_up_mm (float, optional): Distance to move gripper up (positive) or down (negative) in mm
-            gripper_move_forward_mm (float, optional): Distance to move gripper forward (positive) or backward (negative) in mm
+            move_gripper_up_mm (float, optional): Distance to move gripper up (positive) or down (negative) in mm
+            move_gripper_forward_mm (float, optional): Distance to move gripper forward (positive) or backward (negative) in mm
             tilt_gripper_down_angle (float, optional): Angle to tilt gripper down (positive) or up (negative) in degrees
             rotate_gripper_clockwise_angle (float, optional): Angle to rotate gripper clockwise (positive) or counterclockwise (negative) in degrees
             rotate_robot_right_angle (float, optional): Angle to rotate entire robot clockwise/right (positive) or counterclockwise/left (negative) in degrees
         Expected input format:
         {
-            "gripper_move_up_mm": "10", # Will move up 1 cm
-            "gripper_move_forward_mm": "-5", # Will move backward 5 mm
+            "move_gripper_up_mm": "10", # Will move up 1 cm
+            "move_gripper_forward_mm": "-5", # Will move backward 5 mm
             "tilt_gripper_down_angle": "10", # Will tilt gripper down 10 degrees
             "rotate_gripper_clockwise_angle": "-15", # Will rotate gripper counterclockwise 15 degrees
             "rotate_robot_clockwise_angle": "15" # Will rotate robot clockwise (to the right) 15 degrees
@@ -167,8 +167,8 @@ def move_robot(
     # All parameters are optional for execute_intuitive_move
     # Convert MCP tool parameters to match the arguments of execute_intuitive_move
     move_params = {
-        "gripper_move_up_mm": float(move_gripper_up_mm) if move_gripper_up_mm is not None else None,
-        "gripper_move_forward_mm": float(move_gripper_forward_mm) if move_gripper_forward_mm is not None else None,
+        "move_gripper_up_mm": float(move_gripper_up_mm) if move_gripper_up_mm is not None else None,
+        "move_gripper_forward_mm": float(move_gripper_forward_mm) if move_gripper_forward_mm is not None else None,
         "tilt_gripper_down_angle": float(tilt_gripper_down_angle) if tilt_gripper_down_angle is not None else None,
         "rotate_gripper_clockwise_angle": float(rotate_gripper_clockwise_angle) if rotate_gripper_clockwise_angle is not None else None,
         "rotate_robot_clockwise_angle": float(rotate_robot_right_angle) if rotate_robot_right_angle is not None else None,

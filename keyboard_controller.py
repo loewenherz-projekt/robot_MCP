@@ -30,10 +30,10 @@ class KeyboardController:
         # Key mappings using intuitive command names
         self.key_mappings = {
             # Cartesian movements
-            keyboard.KeyCode.from_char('w'): ("intuitive_move", {"gripper_move_forward_mm": self.spatial_step_mm}),
-            keyboard.KeyCode.from_char('s'): ("intuitive_move", {"gripper_move_forward_mm": -self.spatial_step_mm}),
-            keyboard.Key.up:                 ("intuitive_move", {"gripper_move_up_mm": self.spatial_step_mm}),
-            keyboard.Key.down:               ("intuitive_move", {"gripper_move_up_mm": -self.spatial_step_mm}),
+            keyboard.KeyCode.from_char('w'): ("intuitive_move", {"move_gripper_forward_mm": self.spatial_step_mm}),
+            keyboard.KeyCode.from_char('s'): ("intuitive_move", {"move_gripper_forward_mm": -self.spatial_step_mm}),
+            keyboard.Key.up:                 ("intuitive_move", {"move_gripper_up_mm": self.spatial_step_mm}),
+            keyboard.Key.down:               ("intuitive_move", {"move_gripper_up_mm": -self.spatial_step_mm}),
             
             # Rotations and Tilts (as direct joint deltas within intuitive_move)
             keyboard.Key.left:  ("intuitive_move", {"rotate_robot_clockwise_angle": -self.angle_step_deg}), # Counter-clockwise
