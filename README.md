@@ -1,7 +1,6 @@
 # SO-ARM100 Robot Control with MCP
 
-> **🎥 Watch the full tutorial:** 
-> 
+[![Watch the full tutorial](https://img.youtube.com/vi/EmpQQd7jRqs/0.jpg)](https://youtu.be/EmpQQd7jRqs)
 
 A companion repository to my video about MCP server for the robot:
 - **MCP Server** for LLM-based AI agents (Claude Desktop, Cursor, Windsurf, etc.) to control the robot
