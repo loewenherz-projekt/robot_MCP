@@ -7,7 +7,7 @@ A companion repository to my video about MCP server for the robot:
 - **Direct keyboard control** for manual operation
 
 
-This repository suppose to work with the SO-ARM100 / 101 robots. Refer to [lerobot SO-101 setup guide](https://github.com/huggingface/lerobot/blob/main/examples/12_use_so101.md) for the detailed instructions on how to setup the robot.
+This repository suppose to work with the SO-ARM100 / 101 robots. Refer to [lerobot SO-101 setup guide](https://huggingface.co/docs/lerobot/so101) for the detailed instructions on how to setup the robot.
 
 If you want to know more about MCP refer to the [official MCP documentation](https://github.com/modelcontextprotocol/python-sdk)
 
