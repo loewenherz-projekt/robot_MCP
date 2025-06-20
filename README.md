@@ -24,7 +24,8 @@ source .venv/bin/activate  # or .venv\Scripts\activate on Windows
 pip install -r requirements.txt
 ```
 
-It may be required to install lerobot separately, just use the official instructions from the [lerobot repository](https://github.com/huggingface/lerobot)
+The `lerobot` library is included as a subdirectory in this project. Installing
+the requirements file will install it in editable mode from `./lerobot`.
 
 
 ### 2. Connect Your Robot

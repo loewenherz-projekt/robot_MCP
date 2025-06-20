@@ -6,7 +6,8 @@ Update it before using any other script.
 import os
 from dataclasses import dataclass, field
 from typing import Dict, Tuple
-from lerobot.common.robot_devices.cameras.configs import OpenCVCameraConfig, CameraConfig
+from lerobot.common.cameras.opencv import OpenCVCameraConfig
+from lerobot.common.cameras.configs import CameraConfig
 
 
 @dataclass
@@ -32,23 +33,23 @@ class RobotConfig:
     cameras: Dict[str, CameraConfig] = field(
         default_factory=lambda: {
             "front": OpenCVCameraConfig(
-                camera_index=1,
+                index_or_path=1,
                 fps=30,
                 width=640,
                 height=360,
             ),
-             "wrist": OpenCVCameraConfig(
-                camera_index=0,
+            "wrist": OpenCVCameraConfig(
+                index_or_path=0,
                 fps=30,
                 width=640,
                 height=360,
-            ),          
+            ),
             "top view": OpenCVCameraConfig(
-                camera_index=2,
+                index_or_path=2,
                 fps=30,
                 width=640,
                 height=360,
-            ),    
+            ),
         }
     )
 
