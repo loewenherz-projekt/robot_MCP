@@ -10,8 +10,8 @@ import numpy as np
 import math
 import os
 
-from lerobot.common.robot_devices.motors.feetech import FeetechMotorsBus
-from lerobot.common.robot_devices.motors.configs import FeetechMotorsBusConfig
+from lerobot.common.motors import Motor, MotorNormMode, MotorCalibration
+from lerobot.common.motors.feetech import FeetechMotorsBus
 from config import robot_config
 import time
 from camera_controller import CameraController
@@ -79,17 +79,31 @@ class RobotController:
         self.current_positions_deg: Dict[str, float] = {}
         self.current_cartesian_mm: Dict[str, float] = {"x": 0.0, "z": 0.0}
 
-        bus_cfg = FeetechMotorsBusConfig(
+        motors = {}
+        for name, (motor_id, model) in robot_config.motors.items():
+            norm = MotorNormMode.RANGE_0_100 if name == "gripper" else MotorNormMode.DEGREES
+            motors[name] = Motor(motor_id, model, norm)
+
+        self.motor_bus = FeetechMotorsBus(
             port=robot_config.port,
-            motors=robot_config.motors,
+            motors=motors,
         )
-        self.motor_bus = FeetechMotorsBus(bus_cfg)
         self.motor_bus.connect()
 
         # Load the calibration file
         if os.path.exists(robot_config.calibration_file):
             with open(robot_config.calibration_file, "r") as f:
-                self.motor_bus.set_calibration(json.load(f))
+                data = json.load(f)
+                calibration = {}
+                for i, name in enumerate(data["motor_names"]):
+                    calibration[name] = MotorCalibration(
+                        id=robot_config.motors[name][0],
+                        drive_mode=data["drive_mode"][i],
+                        homing_offset=data["homing_offset"][i],
+                        range_min=data["start_pos"][i],
+                        range_max=data["end_pos"][i],
+                    )
+                self.motor_bus.write_calibration(calibration)
         else:
             error_msg = f"Calibration file {robot_config.calibration_file} not found"
             logging.error(error_msg)

@@ -6,8 +6,8 @@ import logging
 from typing import Dict, Optional
 import numpy as np
 
-from lerobot.common.robot_devices.cameras.opencv import OpenCVCamera, find_cameras
-from lerobot.common.robot_devices.cameras.configs import OpenCVCameraConfig, CameraConfig
+from lerobot.common.cameras.opencv import OpenCVCamera, OpenCVCameraConfig
+from lerobot.common.cameras.configs import CameraConfig
 from config import robot_config
 
 class CameraController:
