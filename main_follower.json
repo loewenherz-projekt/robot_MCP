@@ -1,1 +1,44 @@
-{"homing_offset": [3084, 3080, -1053, -1991, 2090, -1211], "drive_mode": [0, 0, 1, 0, 1, 0], "start_pos": [2070, 3072, 983, 2039, 2156, 1593], "end_pos": [-2060, -1984, 2077, 3015, -1066, 2235], "calib_mode": ["DEGREE", "DEGREE", "DEGREE", "DEGREE", "DEGREE", "LINEAR"], "motor_names": ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper"]}
+{
+    "shoulder_pan": {
+        "id": 1,
+        "drive_mode": 0,
+        "homing_offset": 143,
+        "range_min": 725,
+        "range_max": 3438
+    },
+    "shoulder_lift": {
+        "id": 2,
+        "drive_mode": 0,
+        "homing_offset": -72,
+        "range_min": 871,
+        "range_max": 3258
+    },
+    "elbow_flex": {
+        "id": 3,
+        "drive_mode": 0,
+        "homing_offset": -26,
+        "range_min": 840,
+        "range_max": 3059
+    },
+    "wrist_flex": {
+        "id": 4,
+        "drive_mode": 0,
+        "homing_offset": 138,
+        "range_min": 806,
+        "range_max": 3259
+    },
+    "wrist_roll": {
+        "id": 5,
+        "drive_mode": 0,
+        "homing_offset": -1964,
+        "range_min": 0,
+        "range_max": 4095
+    },
+    "gripper": {
+        "id": 6,
+        "drive_mode": 0,
+        "homing_offset": -56,
+        "range_min": 1359,
+        "range_max": 2852
+    }
+}
