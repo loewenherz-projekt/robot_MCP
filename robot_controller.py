@@ -74,7 +74,7 @@ class RobotController:
     ELBOW_OFFSET_ANGLE_RAD = math.asin(robot_config.ELBOW_MOUNT_OFFSET_MM / L2)
 
     def __init__(self, update_goal_pos: bool = True):
-        self.motor_names = robot_config.motors.keys()
+        self.motor_names = list(robot_config.motors.keys())
 
         self.current_positions_deg: Dict[str, float] = {}
         self.current_cartesian_mm: Dict[str, float] = {"x": 0.0, "z": 0.0}
@@ -95,14 +95,24 @@ class RobotController:
             with open(robot_config.calibration_file, "r") as f:
                 data = json.load(f)
                 calibration = {}
-                for i, name in enumerate(data["motor_names"]):
-                    calibration[name] = MotorCalibration(
-                        id=robot_config.motors[name][0],
-                        drive_mode=data["drive_mode"][i],
-                        homing_offset=data["homing_offset"][i],
-                        range_min=data["start_pos"][i],
-                        range_max=data["end_pos"][i],
-                    )
+                if "motor_names" in data:
+                    for i, name in enumerate(data["motor_names"]):
+                        calibration[name] = MotorCalibration(
+                            id=robot_config.motors[name][0],
+                            drive_mode=data["drive_mode"][i],
+                            homing_offset=data["homing_offset"][i],
+                            range_min=data["start_pos"][i],
+                            range_max=data["end_pos"][i],
+                        )
+                else:
+                    for name, params in data.items():
+                        calibration[name] = MotorCalibration(
+                            id=params.get("id", robot_config.motors[name][0]),
+                            drive_mode=params["drive_mode"],
+                            homing_offset=params["homing_offset"],
+                            range_min=params["range_min"],
+                            range_max=params["range_max"],
+                        )
                 self.motor_bus.write_calibration(calibration)
         else:
             error_msg = f"Calibration file {robot_config.calibration_file} not found"
