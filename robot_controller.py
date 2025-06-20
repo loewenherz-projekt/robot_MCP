@@ -74,7 +74,10 @@ class RobotController:
     ELBOW_OFFSET_ANGLE_RAD = math.asin(robot_config.ELBOW_MOUNT_OFFSET_MM / L2)
 
     def __init__(self, update_goal_pos: bool = True):
-        self.motor_names = list(robot_config.motors.keys())
+        # Store motor names as a tuple so they can be safely used as dictionary
+        # keys inside the motors bus (lists are unhashable).  Passing a tuple is
+        # also supported by the underlying bus implementation.
+        self.motor_names = tuple(robot_config.motors.keys())
 
         self.current_positions_deg: Dict[str, float] = {}
         self.current_cartesian_mm: Dict[str, float] = {"x": 0.0, "z": 0.0}
