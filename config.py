@@ -15,7 +15,7 @@ class RobotConfig:
     """Configuration for the robot controller."""
 
     # Serial port
-    port: str = "/dev/tty.usbmodem58FD0168731"
+    port: str = "/dev/ttyACM0"
 
     # Provide the absolute path to the calibration file
     calibration_file: str = os.path.join(os.path.dirname(__file__), "main_follower.json")
