@@ -1,6 +1,6 @@
 pynput>=1.7.6
 numpy>=1.24.0
-git+https://github.com/huggingface/lerobot.git@bfd26eef5a781c8b6d74c43a2d8be318e5888515#egg=lerobot
+git+https://github.com/huggingface/lerobot.git#egg=lerobot
 feetech-servo-sdk>=1.0.0
 pillow>=9.0.0
 mcp[cli]>=0.0.0
