@@ -14,7 +14,7 @@ import time
 from lerobot.common.robots import Robot
 from lerobot.common.robots.so100_follower import SO100Follower, SO100FollowerConfig
 from lerobot.common.robots.so101_follower import SO101Follower, SO101FollowerConfig
-from lerobot.common.robots.lekiwi import LeKiwi, LeKiwiConfig
+from lerobot.common.robots.lekiwi import LeKiwiClient, LeKiwiClientConfig
 
 # --- Local Imports ---
 from config import robot_config
@@ -53,7 +53,7 @@ class RobotController:
     ROBOT_TYPES = {
         "so100_follower": (SO100Follower, SO100FollowerConfig),
         "so101_follower": (SO101Follower, SO101FollowerConfig),
-        "lekiwi": (LeKiwi, LeKiwiConfig),
+        "lekiwi": (LeKiwiClient, LeKiwiClientConfig),
     }
 
     def __init__(self, read_only: bool = False):
@@ -98,10 +98,15 @@ class RobotController:
 
     def _connect_robot(self) -> None:
         """Initialize and connect to robot hardware."""
-        robot_params = {k: v for k, v in robot_config.lerobot_config.items() if k != "type"}
-        
-        # Set use_degrees=False to use normalized values (-100 to +100)
-        robot_params["use_degrees"] = False
+
+        keys_to_exclude = ["type"]
+
+        if self.robot_type == "lekiwi":
+            keys_to_exclude.append("port")
+        else:
+            keys_to_exclude.append("remote_ip")
+
+        robot_params = {k: v for k, v in robot_config.lerobot_config.items() if k not in keys_to_exclude}
         
         try:
             # Create config and robot using LeRobot factory
@@ -118,27 +123,17 @@ class RobotController:
             raise
 
     def _connect_robot_readonly(self) -> None:
-        """Connect to robot in read-only mode and disable torque for manual movement."""
-        robot_params = {k: v for k, v in robot_config.lerobot_config.items() if k != "type"}
-        
-        # Set use_degrees=False to use normalized values (-100 to +100)
-        robot_params["use_degrees"] = False
-        
-        robot_class, config_class = self.ROBOT_TYPES.get(self.robot_type, (None, None))
-        if not robot_class:
-            raise ValueError(f"Unsupported robot type: '{self.robot_type}'")
-        
+        """Connect to robot and disable torque for manual movement."""
         try:
-            cfg = config_class(**robot_params)
-            self.robot = robot_class(cfg)
-            
-            # Connect with calibration disabled to avoid commands
-            self.robot.connect(calibrate=False)
-            
-            # CRITICAL: Disable torque so robot can be moved manually
-            self.robot.bus.disable_torque()
-            logger.info(f"Connected to {self.robot_type} in READ-ONLY mode")
-            logger.info("🔓 TORQUE DISABLED: Robot can now be moved manually while monitoring positions")
+            self._connect_robot()
+
+            if self.robot_type != "lekiwi":
+                self.robot.bus.disable_torque()
+                logger.info(f"Connected to {self.robot_type} in READ-ONLY mode")
+                logger.info("🔓 TORQUE DISABLED: Robot can now be moved manually while monitoring positions")
+
+            else:
+                logger.warning("LeKiwi does not support remote torque disabling, you need to do it manually on the host.")
             
         except Exception as e:
             logger.error(f"Failed to connect to robot in read-only mode: {e}")
@@ -211,13 +206,41 @@ class RobotController:
         try:
             observation = self.robot.get_observation()
             
-            for joint_name in self.joint_names:
-                pos_key = f"arm_{joint_name}.pos" if self.robot_type == "lekiwi" else f"{joint_name}.pos"
-                
-                if pos_key in observation:
-                    norm_val = observation[pos_key]
-                    self.positions_norm[joint_name] = norm_val
-                    self.positions_deg[joint_name] = self._norm_to_deg(joint_name, norm_val)
+            if self.robot_type == "lekiwi":
+                # LeKiwi returns a state vector in observation.state
+                if "observation.state" in observation:
+                    state_vector = observation["observation.state"]
+                    # State order: arm_shoulder_pan.pos, arm_shoulder_lift.pos, arm_elbow_flex.pos, 
+                    #              arm_wrist_flex.pos, arm_wrist_roll.pos, arm_gripper.pos, x.vel, y.vel, theta.vel
+                    state_order = [
+                        "arm_shoulder_pan.pos", "arm_shoulder_lift.pos", "arm_elbow_flex.pos",
+                        "arm_wrist_flex.pos", "arm_wrist_roll.pos", "arm_gripper.pos",
+                        "x.vel", "y.vel", "theta.vel"
+                    ]
+                    
+                    for i, joint_name in enumerate(self.joint_names):
+                        pos_key = f"arm_{joint_name}.pos"
+                        if i < len(state_vector) and pos_key in state_order:
+                            idx = state_order.index(pos_key)
+                            norm_val = float(state_vector[idx])
+                            self.positions_norm[joint_name] = norm_val
+                            self.positions_deg[joint_name] = self._norm_to_deg(joint_name, norm_val)
+                else:
+                    # Fallback: try direct observation keys
+                    for joint_name in self.joint_names:
+                        pos_key = f"arm_{joint_name}.pos"
+                        if pos_key in observation:
+                            norm_val = observation[pos_key]
+                            self.positions_norm[joint_name] = norm_val
+                            self.positions_deg[joint_name] = self._norm_to_deg(joint_name, norm_val)
+            else:
+                # SO100/SO101: direct observation keys
+                for joint_name in self.joint_names:
+                    pos_key = f"{joint_name}.pos"
+                    if pos_key in observation:
+                        norm_val = observation[pos_key]
+                        self.positions_norm[joint_name] = norm_val
+                        self.positions_deg[joint_name] = self._norm_to_deg(joint_name, norm_val)
             
             # Update cartesian coordinates
             fk_x, fk_z = self.kinematics.forward_kinematics(
@@ -430,11 +453,26 @@ class RobotController:
             
         try:
             observation = self.robot.get_observation()
-            camera_names = list(robot_config.lerobot_config.get("cameras", {}).keys())
-            return {
-                key: value for key, value in observation.items()
-                if key in camera_names and isinstance(value, np.ndarray) and value.ndim == 3
-            }
+            camera_images = {}
+            
+            if self.robot_type == "lekiwi":
+                # LeKiwi returns images with observation.images. prefix and as torch tensors
+                for key, value in observation.items():
+                    if key.startswith("observation.images."):
+                        camera_name = key.replace("observation.images.", "")
+                        if hasattr(value, 'numpy'):  # torch tensor
+                            camera_images[camera_name] = value.numpy()
+                        elif isinstance(value, np.ndarray):
+                            camera_images[camera_name] = value
+            else:
+                # SO100/SO101: direct camera names as numpy arrays
+                camera_names = list(robot_config.lerobot_config.get("cameras", {}).keys())
+                camera_images = {
+                    key: value for key, value in observation.items()
+                    if key in camera_names and isinstance(value, np.ndarray) and value.ndim == 3
+                }
+            
+            return camera_images
         except Exception as e:
             logger.error(f"Error getting camera images: {e}", exc_info=True)
             return {}

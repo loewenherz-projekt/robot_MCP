@@ -9,8 +9,9 @@ from typing import Dict, Tuple, Any, Final
 from lerobot.common.cameras.opencv.configuration_opencv import OpenCVCameraConfig
 
 # Module-level constants
-DEFAULT_ROBOT_TYPE: Final[str] = "so100_follower"
-DEFAULT_SERIAL_PORT: Final[str] = "/dev/tty.usbmodem58FD0168731"
+DEFAULT_ROBOT_TYPE: Final[str] = "lekiwi"
+DEFAULT_SERIAL_PORT: Final[str] = "/dev/tty.usbmodem58FD0168731" # only for SO ARM
+DEFAULT_REMOTE_IP: Final[str] = "192.168.1.1" # only for LeKiwi
 
 # Camera configuration constants
 DEFAULT_CAMERA_FPS: Final[int] = 30
@@ -32,6 +33,7 @@ class RobotConfig:
         default_factory=lambda: {
             "type": DEFAULT_ROBOT_TYPE,
             "port": DEFAULT_SERIAL_PORT,
+            "remote_ip": DEFAULT_REMOTE_IP,
             "cameras": {
                 "front": OpenCVCameraConfig(
                     index_or_path=0,
@@ -45,12 +47,12 @@ class RobotConfig:
                     width=DEFAULT_CAMERA_WIDTH,
                     height=DEFAULT_CAMERA_HEIGHT,
                 ),
-                # "top_view": OpenCVCameraConfig(
-                #     index_or_path=2,
-                #     fps=DEFAULT_CAMERA_FPS,
-                #     width=DEFAULT_CAMERA_WIDTH,
-                #     height=DEFAULT_CAMERA_HEIGHT,
-                # ),
+                "top": OpenCVCameraConfig(
+                    index_or_path=2,
+                    fps=DEFAULT_CAMERA_FPS,
+                    width=DEFAULT_CAMERA_WIDTH,
+                    height=DEFAULT_CAMERA_HEIGHT,
+                ),
             },
         }
     )
@@ -60,11 +62,11 @@ class RobotConfig:
     MOTOR_NORMALIZED_TO_DEGREE_MAPPING: Dict[str, Tuple[float, float, float, float]] = field(
         default_factory=lambda: {
             "shoulder_pan":  (-91.7, 99.5, 0.0, 180.0),
-            "shoulder_lift": (-89.4, 90.2, 0, 180.0),
-            "elbow_flex":    (96.5, -82.3, 0, 180.0),
+            "shoulder_lift": (-89.4, 99.4, 0, 180.0),
+            "elbow_flex":    (96.5, -92.7, 0, 180.0),
             "wrist_flex":    (-90.0, 90.0, -90.0, 90.0),
-            "wrist_roll":    (51.5, -51.2, -90, 90),
-            "gripper":       (0.0, 100.0, 0.0, 100.0),  # Gripper is 0-100, maps to 0-100 degrees/percent
+            "wrist_roll":    (100, -100, -90, 90),
+            "gripper":       (31.0, 100.0, 0.0, 100.0),  # Gripper is 0-100, maps to 0-100 degrees/percent
         }
     )
 
@@ -120,12 +122,12 @@ Instructions:
             "lekiwi": {
                 "L1": 117.0,
                 "L2": 136.0,
-                "BASE_HEIGHT_MM": 120.0,
+                "BASE_HEIGHT_MM": 210.0, # LeKiwi is 9cm elevated
                 "SHOULDER_MOUNT_OFFSET_MM": 32.0,
                 "ELBOW_MOUNT_OFFSET_MM": 4.0,
                 "SPATIAL_LIMITS": {
                     "x": (-20.0, 250.0),
-                    "z": (-60.0, 300.0),  # Different Z limits for lekiwi as it is elevated
+                    "z": (30.0, 370.0),
                 }
             }
         }
