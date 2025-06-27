@@ -5,53 +5,79 @@ Update it before using any other script.
 
 import os
 from dataclasses import dataclass, field
-from typing import Dict, Tuple
-from lerobot.common.robot_devices.cameras.configs import OpenCVCameraConfig, CameraConfig
+from typing import Dict, Tuple, Any, Final
+from lerobot.common.cameras.opencv.configuration_opencv import OpenCVCameraConfig
 
+# Module-level constants
+DEFAULT_ROBOT_TYPE: Final[str] = "so100_follower"
+DEFAULT_SERIAL_PORT: Final[str] = "/dev/tty.usbmodem58FD0168731"
+
+# Camera configuration constants
+DEFAULT_CAMERA_FPS: Final[int] = 30
+DEFAULT_CAMERA_WIDTH: Final[int] = 640
+DEFAULT_CAMERA_HEIGHT: Final[int] = 360
 
 @dataclass
 class RobotConfig:
-    """Configuration for the robot controller."""
-
-    # Serial port
-    port: str = "/dev/tty.usbmodem58FD0168731"
-
-    # Provide the absolute path to the calibration file
-    calibration_file: str = os.path.join(os.path.dirname(__file__), "main_follower.json")
+    """
+    Configuration for the robot controller.
     
-    motors = {
-            "shoulder_pan": [1, "sts3215"],
-            "shoulder_lift": [2, "sts3215"],
-            "elbow_flex": [3, "sts3215"],
-            "wrist_flex": [4, "sts3215"],
-            "wrist_roll": [5, "sts3215"],
-            "gripper": [6, "sts3215"]
-        }
-    
-    # Camera configuration using lerobot format
-    cameras: Dict[str, CameraConfig] = field(
+    This dataclass contains all configuration parameters needed for robot operation,
+    including hardware settings, kinematic parameters, and movement constants.
+    """
+
+    # This will hold the configuration for the `lerobot` robot instance.
+    # It's structured as a dictionary to be passed to `make_robot_from_config` or a similar factory.
+    lerobot_config: Dict[str, Any] = field(
         default_factory=lambda: {
-            "front": OpenCVCameraConfig(
-                camera_index=1,
-                fps=30,
-                width=640,
-                height=360,
-            ),
-             "wrist": OpenCVCameraConfig(
-                camera_index=0,
-                fps=30,
-                width=640,
-                height=360,
-            ),          
-            "top view": OpenCVCameraConfig(
-                camera_index=2,
-                fps=30,
-                width=640,
-                height=360,
-            ),    
+            "type": DEFAULT_ROBOT_TYPE,
+            "port": DEFAULT_SERIAL_PORT,
+            "cameras": {
+                "front": OpenCVCameraConfig(
+                    index_or_path=0,
+                    fps=DEFAULT_CAMERA_FPS,
+                    width=DEFAULT_CAMERA_WIDTH,
+                    height=DEFAULT_CAMERA_HEIGHT,
+                ),
+                "wrist": OpenCVCameraConfig(
+                    index_or_path=1,
+                    fps=DEFAULT_CAMERA_FPS,
+                    width=DEFAULT_CAMERA_WIDTH,
+                    height=DEFAULT_CAMERA_HEIGHT,
+                ),
+                # "top_view": OpenCVCameraConfig(
+                #     index_or_path=2,
+                #     fps=DEFAULT_CAMERA_FPS,
+                #     width=DEFAULT_CAMERA_WIDTH,
+                #     height=DEFAULT_CAMERA_HEIGHT,
+                # ),
+            },
         }
     )
 
+    # Mapping from lerobot's normalized motor outputs (-100 to 100 or 0 to 100) to degrees.
+    # Format: {motor_name: (norm_min, norm_max, deg_min, deg_max)}
+    MOTOR_NORMALIZED_TO_DEGREE_MAPPING: Dict[str, Tuple[float, float, float, float]] = field(
+        default_factory=lambda: {
+            "shoulder_pan":  (-91.7, 99.5, 0.0, 180.0),
+            "shoulder_lift": (-89.4, 90.2, 0, 180.0),
+            "elbow_flex":    (96.5, -82.3, 0, 180.0),
+            "wrist_flex":    (-90.0, 90.0, -90.0, 90.0),
+            "wrist_roll":    (51.5, -51.2, -90, 90),
+            "gripper":       (0.0, 100.0, 0.0, 100.0),  # Gripper is 0-100, maps to 0-100 degrees/percent
+        }
+    )
+
+    # Movement constants for smooth interpolation
+    MOVEMENT_CONSTANTS: Dict[str, Any] = field(
+        default_factory=lambda: {
+            "DEGREES_PER_STEP": 1.5,           # Degrees per interpolation step
+            "MAX_INTERPOLATION_STEPS": 150,    # Maximum number of interpolation steps
+            "STEP_DELAY_SECONDS": 0.01,        # Delay between interpolation steps (100Hz)
+        }
+    )
+
+    # Robot description for AI/LLM context
     robot_description: str = ("""
 Follow these instructions precisely. Never deviate.
 
@@ -77,40 +103,41 @@ Instructions:
 """
     )
 
-    # Kinematic and operational parameters
-    L1: float = 117.0  # Length of first lever (shoulder to elbow) in mm
-    L2: float = 136.0  # Length of second lever (elbow to wrist_flex axis) in mm
-    BASE_HEIGHT_MM: float = 120.0 # Height from ground to shoulder_lift axis in mm
-    
-    # These offsets describe how the physical linkage is mounted relative to ideal joint axes
-    # Used in FK/IK calculations if the kinematic model requires them.
-    SHOULDER_MOUNT_OFFSET_MM: float = 32.0 # Example: Offset for shoulder joint from idealized zero
-    ELBOW_MOUNT_OFFSET_MM: float = 4.0    # Example: Offset for elbow joint from idealized zero
-
-    OPERATIONAL_DEGREE_LIMITS: Dict[str, Tuple[float, float]] = field(
+    # Kinematic parameters for different robot types
+    KINEMATIC_PARAMS: Dict[str, Dict[str, Any]] = field(
         default_factory=lambda: {
-            "gripper":         (-10.0, 110.0),      # 0 = closed, 100 = fully open
-            "wrist_roll":      (-20.0, 120.0),       # 0 = vertical, 90 = flat
-            "wrist_flex":     (-100.0, 100.0),    # -90 = max up, 90 = max down
-            "elbow_flex":      (-15.0, 190.0),     # 0 = fully bent, 180 = fully straight
-            "shoulder_lift":  (-15.0, 195.0),     # 0 = base position, 180 = fully forward
-            "shoulder_pan":    (0.0, 180.0),      # 0 left, 180 right
+            "default": {
+                "L1": 117.0,  # Shoulder to elbow length (mm)
+                "L2": 136.0,  # Elbow to wrist length (mm)
+                "BASE_HEIGHT_MM": 120.0,
+                "SHOULDER_MOUNT_OFFSET_MM": 32.0,
+                "ELBOW_MOUNT_OFFSET_MM": 4.0,
+                "SPATIAL_LIMITS": {
+                    "x": (-20.0, 250.0),  # Forward/backward limits
+                    "z": (30.0, 370.0),   # Up/down limits
+                }
+            },
+            "lekiwi": {
+                "L1": 117.0,
+                "L2": 136.0,
+                "BASE_HEIGHT_MM": 120.0,
+                "SHOULDER_MOUNT_OFFSET_MM": 32.0,
+                "ELBOW_MOUNT_OFFSET_MM": 4.0,
+                "SPATIAL_LIMITS": {
+                    "x": (-20.0, 250.0),
+                    "z": (-60.0, 300.0),  # Different Z limits for lekiwi as it is elevated
+                }
+            }
         }
     )
 
+    # Predefined robot positions for quick access
     PRESET_POSITIONS: Dict[str, Dict[str, float]] = field(
         default_factory=lambda: {
             "1": { "gripper": 0.0, "wrist_roll": 90.0, "wrist_flex": 0.0, "elbow_flex": 0.0, "shoulder_lift": 0.0, "shoulder_pan": 90.0 },
             "2": { "gripper": 0.0, "wrist_roll": 90.0, "wrist_flex": 0.0, "elbow_flex": 45.0, "shoulder_lift": 45.0, "shoulder_pan": 90.0 },
             "3": { "gripper": 40.0, "wrist_roll": 90.0, "wrist_flex": 90.0, "elbow_flex": 45.0, "shoulder_lift": 45.0, "shoulder_pan": 90.0 },
             "4": { "gripper": 40.0, "wrist_roll": 90.0, "wrist_flex": -60.0, "elbow_flex": 20.0, "shoulder_lift": 80.0, "shoulder_pan": 90.0 },
-        }
-    )
-
-    SPATIAL_LIMITS: Dict[str, Tuple[float, float]] = field(
-        default_factory=lambda: {
-            "x": (-20.0, 250.0), # Min/Max X coordinate (mm) for wrist_flex origin
-            "z": (30.0, 370.0),  # Min/Max Z coordinate (mm) for wrist_flex origin
         }
     )
 
