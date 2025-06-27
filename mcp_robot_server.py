@@ -133,7 +133,7 @@ def get_robot_state():
             move_gripper_forward_mm (float, optional): Distance to move gripper forward (positive) or backward (negative) in mm
             tilt_gripper_down_angle (float, optional): Angle to tilt gripper down (positive) or up (negative) in degrees
             rotate_gripper_clockwise_angle (float, optional): Angle to rotate gripper clockwise (positive) or counterclockwise (negative) in degrees
-            rotate_robot_right_angle (float, optional): Angle to rotate entire robot clockwise/right (positive) or counterclockwise/left (negative) in degrees
+            rotate_robot_clockwise_angle (float, optional): Angle to rotate entire robot clockwise/right (positive) or counterclockwise/left (negative) in degrees
         Expected input format:
         {
             "move_gripper_up_mm": "10", # Will move up 1 cm
@@ -157,12 +157,12 @@ def move_robot(
     move_gripper_forward_mm=None, 
     tilt_gripper_down_angle=None, 
     rotate_gripper_clockwise_angle=None, 
-    rotate_robot_right_angle=None
+    rotate_robot_clockwise_angle=None
 ):
     robot = get_robot()
     logger.info(f"MCP Tool: move_robot received: up={move_gripper_up_mm}, fwd={move_gripper_forward_mm}, "
                 f"tilt={tilt_gripper_down_angle}, grip_rot={rotate_gripper_clockwise_angle}, "
-                f"robot_rot={rotate_robot_right_angle}")
+                f"robot_rot={rotate_robot_clockwise_angle}")
 
     # All parameters are optional for execute_intuitive_move
     # Convert MCP tool parameters to match the arguments of execute_intuitive_move
@@ -171,7 +171,7 @@ def move_robot(
         "move_gripper_forward_mm": float(move_gripper_forward_mm) if move_gripper_forward_mm is not None else None,
         "tilt_gripper_down_angle": float(tilt_gripper_down_angle) if tilt_gripper_down_angle is not None else None,
         "rotate_gripper_clockwise_angle": float(rotate_gripper_clockwise_angle) if rotate_gripper_clockwise_angle is not None else None,
-        "rotate_robot_clockwise_angle": float(rotate_robot_right_angle) if rotate_robot_right_angle is not None else None,
+        "rotate_robot_clockwise_angle": float(rotate_robot_clockwise_angle) if rotate_robot_clockwise_angle is not None else None,
     }
     
     # Filter out None values to pass only specified arguments to the robot controller method
