@@ -84,7 +84,7 @@ def main():
     try:
         # Initialize robot controller in READ-ONLY mode
         print("\n🔌 Connecting to robot...")
-        with RobotController(update_goal_pos=False, read_only=True) as controller:
+        with RobotController(read_only=True) as controller:
             print(f"✅ Connected to {controller.robot_type}")
             print("🔓 TORQUE DISABLED: Robot can now be moved manually!")
             print("📊 Starting position monitoring...")

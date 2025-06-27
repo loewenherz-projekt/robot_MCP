@@ -195,7 +195,7 @@ def main():
     try:
         # Initialize robot controller
         print("🔌 Connecting to robot...")
-        robot_instance = RobotController(update_goal_pos=True)
+        robot_instance = RobotController()
         print("✅ Robot connected successfully")
         
         # Initialize keyboard controller
