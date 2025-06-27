@@ -158,6 +158,36 @@ class RobotController:
             return deg_min
         return deg_min + ((normalized - norm_min) * (deg_max - deg_min)) / (norm_max - norm_min)
 
+    def _validate_normalized_ranges(self, positions_deg: Dict[str, float]) -> tuple[bool, str]:
+        """
+        Validate that the target positions will result in normalized values within the robot's calibrated ranges.
+        Returns (is_valid, error_message)
+        """
+        errors = []
+        
+        for joint_name, deg_value in positions_deg.items():
+            if joint_name not in self.motor_mapping:
+                continue
+                
+            norm_value = self._deg_to_norm(joint_name, deg_value)
+            norm_min, norm_max, deg_min, deg_max = self.motor_mapping[joint_name]
+            
+            # Handle inverted ranges (where norm_min > norm_max)
+            actual_min = min(norm_min, norm_max)
+            actual_max = max(norm_min, norm_max)
+            
+            if norm_value < actual_min or norm_value > actual_max:
+                errors.append(
+                    f"{joint_name.replace('_', ' ').title()} position {deg_value:.1f}° "
+                    f"(normalized: {norm_value:.1f}) is outside valid range "
+                    f"{actual_min:.1f} to {actual_max:.1f}"
+                )
+        
+        if errors:
+            return False, "Movement impossible - out of range: " + "; ".join(errors)
+        
+        return True, ""
+
     def _build_action(self, positions_deg: Dict[str, float]) -> Dict[str, float]:
         """Build action dictionary for lerobot."""
         action = {}
@@ -248,6 +278,11 @@ class RobotController:
         if not valid_positions:
             return MoveResult(True, "No valid joints to move", robot_state=self._get_full_state())
 
+        # Validate that positions are within LeRobot's accepted ranges
+        is_valid, error_msg = self._validate_normalized_ranges(valid_positions)
+        if not is_valid:
+            return MoveResult(False, error_msg, robot_state=self._get_full_state())
+
         try:
             if use_interpolation:
                 self._execute_interpolated_move(valid_positions)
@@ -296,6 +331,13 @@ class RobotController:
                 name: start_positions[name] + (target_positions[name] - start_positions[name]) * (i / steps)
                 for name in target_positions.keys()
             }
+            
+            # Validate each interpolation step to avoid sending invalid commands
+            is_valid, error_msg = self._validate_normalized_ranges(interpolated)
+            if not is_valid:
+                logger.warning(f"Interpolation step {i}/{steps} would exceed range limits, stopping interpolation")
+                break
+                
             action = self._build_action(interpolated)
             self.robot.send_action(action)
             time.sleep(self.movement_config["STEP_DELAY_SECONDS"])
