@@ -14,7 +14,7 @@ Update! Now it partially supports [LeKiwi](https://github.com/SIGRobotics-UIUC/L
 
 After I released the video and this repository, LeRobot released a significant update of the library that breaks the compatibility with the original code.
 
-If you want to use the original code and exactly follow the video, please use [this commit](https://github.com/IliaLarchenko/robot_MCP/tree/a274786c98855648d43ed493485d4e5e9d39e04b).
+If you want to use the original code and exactly follow the video, please use [this release](https://github.com/IliaLarchenko/robot_MCP/tree/v0.0.1).
 
 The current version of the code works with the latest LeRobot version. It supports both SO-ARM100 and LeKiwi (arm only, not mobile base yet). I also did a very big refactoring of the code comparing to the original version discussed in the video.
 
