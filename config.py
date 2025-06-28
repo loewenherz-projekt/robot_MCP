@@ -9,7 +9,7 @@ from typing import Dict, Tuple, Any, Final
 from lerobot.common.cameras.opencv.configuration_opencv import OpenCVCameraConfig
 
 # Module-level constants
-DEFAULT_ROBOT_TYPE: Final[str] = "lekiwi"
+DEFAULT_ROBOT_TYPE: Final[str] = "lekiwi" # "so100", "so101", "lekiwi"
 DEFAULT_SERIAL_PORT: Final[str] = "/dev/tty.usbmodem58FD0168731" # only for SO ARM
 DEFAULT_REMOTE_IP: Final[str] = "192.168.1.1" # only for LeKiwi
 
@@ -96,6 +96,7 @@ Instructions:
 - Move slowly and iteratively
 - Close gripper completely to grab objects
 - Check results after each move before proceeding
+- When the object inside your gripper it will not be visible on top and front cameras and will cover the whole view for the wrist one
 - Split into smaller steps and reanalyze after each one
 - Use only the latest images to evaluate success
 - Always plan movements to avoid collisions

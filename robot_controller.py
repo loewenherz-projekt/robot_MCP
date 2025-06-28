@@ -51,8 +51,8 @@ class MoveResult:
 class RobotController:
     # Robot type mapping
     ROBOT_TYPES = {
-        "so100_follower": (SO100Follower, SO100FollowerConfig),
-        "so101_follower": (SO101Follower, SO101FollowerConfig),
+        "so100": (SO100Follower, SO100FollowerConfig),
+        "so101": (SO101Follower, SO101FollowerConfig),
         "lekiwi": (LeKiwiClient, LeKiwiClientConfig),
     }
 
