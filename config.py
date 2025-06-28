@@ -14,6 +14,7 @@ DEFAULT_SERIAL_PORT: Final[str] = "/dev/tty.usbmodem58FD0168731" # only for SO A
 DEFAULT_REMOTE_IP: Final[str] = "192.168.1.1" # only for LeKiwi
 
 # Camera configuration constants
+# Can also be different for different cameras, set it in lerobot_config
 DEFAULT_CAMERA_FPS: Final[int] = 30
 DEFAULT_CAMERA_WIDTH: Final[int] = 640
 DEFAULT_CAMERA_HEIGHT: Final[int] = 360
@@ -59,6 +60,9 @@ class RobotConfig:
 
     # Mapping from lerobot's normalized motor outputs (-100 to 100 or 0 to 100) to degrees.
     # Format: {motor_name: (norm_min, norm_max, deg_min, deg_max)}
+    # Use check_positions.py, move your robot to 0, 90, 180 degree positions 
+    # and insert the corresponding normalized values here
+    # You can use any 2 points per motor to interpolate, but wider range is better
     MOTOR_NORMALIZED_TO_DEGREE_MAPPING: Dict[str, Tuple[float, float, float, float]] = field(
         default_factory=lambda: {
             "shoulder_pan":  (-91.7, 99.5, 0.0, 180.0),
@@ -66,7 +70,7 @@ class RobotConfig:
             "elbow_flex":    (96.5, -92.7, 0, 180.0),
             "wrist_flex":    (-90.0, 90.0, -90.0, 90.0),
             "wrist_roll":    (100, -100, -90, 90),
-            "gripper":       (31.0, 100.0, 0.0, 100.0),  # Gripper is 0-100, maps to 0-100 degrees/percent
+            "gripper":       (31.0, 100.0, 0.0, 100.0),
         }
     )
 
@@ -107,6 +111,7 @@ Instructions:
     )
 
     # Kinematic parameters for different robot types
+    # You generally don't need to change these unless you have a custom robot
     KINEMATIC_PARAMS: Dict[str, Dict[str, Any]] = field(
         default_factory=lambda: {
             "default": {
@@ -123,7 +128,7 @@ Instructions:
             "lekiwi": {
                 "L1": 117.0,
                 "L2": 136.0,
-                "BASE_HEIGHT_MM": 210.0, # LeKiwi is 9cm elevated
+                "BASE_HEIGHT_MM": 210.0, # LeKiwi is 9cm elevated, adjust if using different wheels
                 "SHOULDER_MOUNT_OFFSET_MM": 32.0,
                 "ELBOW_MOUNT_OFFSET_MM": 4.0,
                 "SPATIAL_LIMITS": {
