@@ -82,7 +82,7 @@ def get_state_with_images(result_json: dict, is_movement: bool = False) -> List[
     robot = get_robot()
     try:
         if is_movement:
-            time.sleep(0.1)  # wait until the robot moved before capturing images
+            time.sleep(0.3)  # wait until the robot moved before capturing images
         
         raw_imgs = robot.get_camera_images()
         mcp_images = [_np_to_mcp_image(img) for img in raw_imgs.values()]
