@@ -6,11 +6,17 @@ A companion repository to my video about MCP server for the robot:
 - **MCP Server** for LLM-based AI agents (Claude Desktop, Cursor, Windsurf, etc.) to control the robot
 - **Direct keyboard control** for manual operation
 
+If you want to know more about MCP refer to the [official MCP documentation](https://github.com/modelcontextprotocol/python-sdk)
 
 This repository suppose to work with the SO-ARM100 / 101 robots. Refer to [lerobot SO-101 setup guide](https://huggingface.co/docs/lerobot/so101) for the detailed instructions on how to setup the robot.
 
-If you want to know more about MCP refer to the [official MCP documentation](https://github.com/modelcontextprotocol/python-sdk)
+Update! Now it partially supports [LeKiwi](https://github.com/SIGRobotics-UIUC/LeKiwi) (only arm, the mobile base control through MCP is TBD).
 
+After I released the video and this repository, LeRobot released a significant update of the library that breaks the compatibility with the original code.
+
+If you want to use the original code and exactly follow the video, please use [this release](https://github.com/IliaLarchenko/robot_MCP/tree/v0.0.1).
+
+The current version of the code works with the latest LeRobot version. It supports both SO-ARM100 and LeKiwi (arm only, not mobile base yet). I also did a very big refactoring of the code comparing to the original version discussed in the video.
 
 ## Quick Start
 
@@ -34,12 +40,14 @@ It may be required to install lerobot separately, just use the official instruct
 
 ### 3. Use the robot
 
-**🔍 Check Robot Status:**
+**🔍 Check Robot Status and Calibration:**
 ```bash
 python check_positions.py
 ```
 
 This will show you the current robot state without actual control. Move your robot manually to make sure it is properly calibrated and configured.
+
+After the latest update, lerobot is using the normalized joints states instead of degrees. You can update `MOTOR_NORMALIZED_TO_DEGREE_MAPPING` in `config.py` to match your robot calibration. You will need to update these values every time you recalibrate the robot.
 
 **🎮 Manual Keyboard Control:**
 ```bash
