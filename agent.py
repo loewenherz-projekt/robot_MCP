@@ -180,13 +180,6 @@ class AIAgent:
                 assistant_response_content = [block.model_dump() for block in response.content]
                 self.conversation_history.append({"role": "assistant", "content": assistant_response_content})
                 
-                # Show Claude's textual response
-                text_blocks = [block for block in response.content if block.type == 'text']
-                if text_blocks:
-                    claude_text = "".join(block.text for block in text_blocks)
-                    if claude_text.strip():
-                        print(f"🤖 Claude: {claude_text}")
-                
                 tool_calls = [block for block in response.content if block.type == 'tool_use']
 
                 if not tool_calls:
