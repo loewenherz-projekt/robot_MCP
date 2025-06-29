@@ -173,5 +173,4 @@ Other arguments:
 python agent.py --mcp-server-ip <your-mcp-host> --mcp-port <your-mcp-port> --thinking-budget <your-thinking-budget>
 ```
 
-
-
+0 budget will disable thinking, it is the fastest and cheapest option but the success rate will drop a lot in this case. It will mostly work for direct simple instructions but can struggle with complex tasks.

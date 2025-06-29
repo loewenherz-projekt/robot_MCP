@@ -130,17 +130,22 @@ class AIAgent:
         max_iterations = 100
         for iteration in range(max_iterations):
             try:
-                with self.claude_client.messages.stream(
-                    model=self.model,
-                    max_tokens=16000,
-                    system=system_prompt,
-                    messages=self.conversation_history,
-                    tools=self.format_tools_for_claude(),
-                    thinking={
+                # Configure thinking based on budget
+                stream_params = {
+                    "model": self.model,
+                    "max_tokens": 16000,
+                    "system": system_prompt,
+                    "messages": self.conversation_history,
+                    "tools": self.format_tools_for_claude(),
+                }
+                
+                if self.thinking_budget > 0:
+                    stream_params["thinking"] = {
                         "type": "enabled",
                         "budget_tokens": self.thinking_budget
-                    },
-                ) as stream:
+                    }
+
+                with self.claude_client.messages.stream(**stream_params) as stream:
                     thinking_started = False
                     response_started = False
                     response_content = []
