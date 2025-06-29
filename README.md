@@ -35,8 +35,8 @@ It may be required to install lerobot separately, just use the official instruct
 
 ### 2. Connect Your Robot
 - Connect SO-ARM100 via USB
-- Update `config.py` with your serial port (e.g., `/dev/tty.usbmodem58FD0168731`)
-- Connect cameras (optional but recommended) and update `config.py` with the correct indices
+- Update `config.py` with your serial port for so-arm (e.g., `/dev/tty.usbmodem58FD0168731`) or robot_ip for lekiwi (e.g., `192.168.1.1`)
+- Connect cameras and update `config.py` with the correct indices and names (for `lekiwi` only names are important)
 
 ### 3. Use the robot
 
