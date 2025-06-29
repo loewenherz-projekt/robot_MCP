@@ -167,10 +167,11 @@ Other arguments:
 --mcp-server-ip - MCP server address, default is 127.0.0.1
 --mcp-port - MCP server port, default is 3001
 --thinking-budget - Claude thinking budget in tokens, default is 1024 (it is minimum). Higher leads to better reasoning but it is slower and more expensive.
+--thinking-every-n - Use thinking every n steps, default is 3.
 
 
 ```bash
-python agent.py --mcp-server-ip <your-mcp-host> --mcp-port <your-mcp-port> --thinking-budget <your-thinking-budget>
+python agent.py --mcp-server-ip <your-mcp-host> --mcp-port <your-mcp-port> --thinking-budget <your-thinking-budget> --thinking-every-n <your-thinking-every-n>
 ```
 
 0 budget will disable thinking, it is the fastest and cheapest option but the success rate will drop a lot in this case. It will mostly work for direct simple instructions but can struggle with complex tasks.

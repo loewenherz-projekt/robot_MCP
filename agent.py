@@ -25,11 +25,12 @@ class AIAgent:
     """AI Agent that uses Claude with MCP tools for autonomous task execution."""
 
     def __init__(self, api_key: str, model: str = "claude-opus-4-20250514", show_images: bool = False, 
-                 mcp_server_ip: str = "127.0.0.1", mcp_port: int = 3001, thinking_budget: int = 1000):
+                 mcp_server_ip: str = "127.0.0.1", mcp_port: int = 3001, thinking_budget: int = 1024, thinking_every_n: int = 1):
         self.api_key = api_key
         self.model = model
         self.mcp_url = f"http://{mcp_server_ip}:{mcp_port}/sse"
         self.thinking_budget = thinking_budget
+        self.thinking_every_n = thinking_every_n
         self.conversation_history = []
         self.tools = []
         self.session = None
@@ -119,10 +120,6 @@ class AIAgent:
         Use them as needed to control a robot and complete tasks.
         Move step by step, evaluate the results of you action after each step.
         Make sure that the step is successfully completed before moving to the next step.
-        Before side moves make sure you are high enough to avoid collisions.
-        IMPORTANT: When analyzing images pay extra attention to the relative position of the object and the robot.
-        E.g. right on the image can be left from the robot perspective and vice versa.
-        If in doubt think twice.
         """
         
         self.conversation_history.append({"role": "user", "content": user_input})
@@ -139,11 +136,13 @@ class AIAgent:
                     "tools": self.format_tools_for_claude(),
                 }
                 
-                if self.thinking_budget > 0:
+                if self.thinking_budget > 0 and iteration % self.thinking_every_n == 0:
                     stream_params["thinking"] = {
                         "type": "enabled",
                         "budget_tokens": self.thinking_budget
                     }
+                else:
+                    stream_params["temperature"] = 0.1
 
                 with self.claude_client.messages.stream(**stream_params) as stream:
                     thinking_started = False
@@ -180,9 +179,17 @@ class AIAgent:
 
                 if hasattr(response, 'usage'):
                     usage = response.usage
-                    print(f"🤖 Claude: {usage.input_tokens}→{usage.output_tokens} tokens")
 
                 assistant_response_content = [block.model_dump() for block in response.content]
+
+                if self.thinking_budget > 0 and self.thinking_every_n > 1:
+                    for block in assistant_response_content:
+                        if block['type'] == "thinking":
+                            block['type'] = "text"
+                            block['text'] = block['thinking']
+                            del block['signature']
+                            del block['thinking']
+
                 self.conversation_history.append({"role": "assistant", "content": assistant_response_content})
                 
                 tool_calls = [block for block in response.content if block.type == 'tool_use']
@@ -281,11 +288,12 @@ async def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(description="AI Agent with Claude & MCP")
     parser.add_argument("--api-key", help="Anthropic API key (or set ANTHROPIC_API_KEY env var)")
-    parser.add_argument("--model", default="claude-opus-4-20250514", help="Claude model to use")
+    parser.add_argument("--model", default="claude-3-7-sonnet-latest", help="Claude model to use")
     parser.add_argument("--show-images", action="store_true", help="Enable image display window")
     parser.add_argument("--mcp-server-ip", default="127.0.0.1", help="MCP server IP")
     parser.add_argument("--mcp-port", type=int, default=3001, help="MCP server port")
     parser.add_argument("--thinking-budget", type=int, default=1024, help="Claude thinking budget in tokens")
+    parser.add_argument("--thinking-every-n", type=int, default=3, help="Use thinking every n steps")
     
     args = parser.parse_args()
     
@@ -293,7 +301,7 @@ async def main():
     if not api_key:
         sys.exit("Error: ANTHROPIC_API_KEY environment variable or --api-key argument is required.")
         
-    agent = AIAgent(api_key, args.model, args.show_images, args.mcp_server_ip, args.mcp_port, args.thinking_budget)
+    agent = AIAgent(api_key, args.model, args.show_images, args.mcp_server_ip, args.mcp_port, args.thinking_budget, args.thinking_every_n)
     await agent.run_cli()
 
 if __name__ == "__main__":
