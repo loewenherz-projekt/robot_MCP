@@ -11,6 +11,7 @@ If you want to know more about MCP refer to the [official MCP documentation](htt
 This repository suppose to work with the SO-ARM100 / 101 robots. Refer to [lerobot SO-101 setup guide](https://huggingface.co/docs/lerobot/so101) for the detailed instructions on how to setup the robot.
 
 Update! Now it partially supports [LeKiwi](https://github.com/SIGRobotics-UIUC/LeKiwi) (only arm, the mobile base control through MCP is TBD).
+I also added a simple agent that uses MCP server to control the robot with Claude. It is much more token efficient than many other agents as it is created specifically for this use case. Currently only works with Claude (other LLMs TBD).
 
 After I released the video and this repository, LeRobot released a significant update of the library that breaks the compatibility with the original code.
 
@@ -134,3 +135,43 @@ Add to your MCP configuration:
 ## Using the robot with MCP
 
 Now you can go to you Client and it should be able to control the robot when you give it the natural language instructions.
+
+
+## Using the Agent
+
+Start the MCP server with the SSE transport
+
+```bash
+mcp run mcp_robot_server.py --transport sse
+```
+
+Now you can use the agent to control the robot.
+
+```bash
+python agent.py
+```
+
+You anthropic API key should either be set in the environment variable `ANTHROPIC_API_KEY` or passed as an argument to the agent.py script.
+
+```bash
+python agent.py --api-key <your-anthropic-api-key>
+```
+
+You can also specify the model to use and whether to show images received from the robot.
+
+```bash
+python agent.py --model <your-model> --show-images
+```
+
+Other arguments:
+--mcp-server-ip - MCP server address, default is 127.0.0.1
+--mcp-port - MCP server port, default is 3001
+--thinking-budget - Claude thinking budget in tokens, default is 1024 (it is minimum). Higher leads to better reasoning but it is slower and more expensive.
+
+
+```bash
+python agent.py --mcp-server-ip <your-mcp-host> --mcp-port <your-mcp-port> --thinking-budget <your-thinking-budget>
+```
+
+
+
