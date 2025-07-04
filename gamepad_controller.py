@@ -48,6 +48,10 @@ class XboxGamepadController:
         self.gamepad.update()
         lx, ly, rx, ry, lt, rt = self.gamepad.get_axis_values()
 
+        # Normalize triggers from [-1, 1] -> [0, 1]
+        lt = (lt + 1.0) / 2.0
+        rt = (rt + 1.0) / 2.0
+
         # D-Pad (Hat) für Arm hoch/runter
         hat_x, hat_y = 0, 0
         if hasattr(self.gamepad.joystick, "get_hat"):
