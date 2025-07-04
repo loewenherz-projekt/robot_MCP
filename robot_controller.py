@@ -11,10 +11,10 @@ from dataclasses import dataclass, field
 import time
 
 # --- Lerobot Imports ---
-from lerobot.common.robots import Robot
-from lerobot.common.robots.so100_follower import SO100Follower, SO100FollowerConfig
-from lerobot.common.robots.so101_follower import SO101Follower, SO101FollowerConfig
-from lerobot.common.robots.lekiwi import LeKiwiClient, LeKiwiClientConfig
+from lerobot.robots import Robot
+from lerobot.robots.so100_follower import SO100Follower, SO100FollowerConfig
+from lerobot.robots.so101_follower import SO101Follower, SO101FollowerConfig
+from lerobot.robots.lekiwi import LeKiwiClient, LeKiwiClientConfig
 
 # --- Local Imports ---
 from config import robot_config

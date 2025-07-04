@@ -6,7 +6,7 @@ Update it before using any other script.
 import os
 from dataclasses import dataclass, field
 from typing import Dict, Tuple, Any, Final
-from lerobot.common.cameras.opencv.configuration_opencv import OpenCVCameraConfig
+from lerobot.cameras.opencv.configuration_opencv import OpenCVCameraConfig
 
 # Module-level constants
 DEFAULT_ROBOT_TYPE: Final[str] = "lekiwi" # "so100", "so101", "lekiwi"
