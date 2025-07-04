@@ -18,8 +18,8 @@ class XboxGamepadController:
         self.robot = robot_controller
         self.gamepad = GamepadController()
         self.running = False
-        self.base_speed_scale = 0.3  # m/s for linear x/y
-        self.base_rot_speed_deg = 60.0  # deg/s for base rotation
+        self.base_speed_scale = 0.3    # m/s for linear x/y
+        self.base_rot_speed_deg = 60.0 # deg/s for base rotation
         self.spatial_step_mm = 2.0
         self.angle_step_deg = 2.0
         self.gripper_step_pct = 3.0
@@ -29,8 +29,8 @@ class XboxGamepadController:
         self.running = True
         print("\n" + "="*50)
         print("🎮 GAMEPAD CONTROLLER ACTIVE")
-        print("Left stick:    Base forward/back & rotate")
-        print("Triggers:      Base strafe left/right")
+        print("Left stick:    Base forward/back & rotate (Y/X)")
+        print("Triggers:      Base strafe left/right (LT/RT)")
         print("D-Pad:         Arm up/down")
         print("Right stick:   Arm forward/back & rotate")
         print("X/Y buttons:   Rotate gripper left/right")
@@ -48,6 +48,7 @@ class XboxGamepadController:
         self.gamepad.update()
         lx, ly, rx, ry, lt, rt = self.gamepad.get_axis_values()
 
+        # D-Pad (Hat) für Arm hoch/runter
         hat_x, hat_y = 0, 0
         if hasattr(self.gamepad.joystick, "get_hat"):
             try:
@@ -55,10 +56,10 @@ class XboxGamepadController:
             except Exception:
                 hat_x, hat_y = 0, 0
 
-        # Arm control first so base command isn't overwritten
-        rotate_delta = rx * self.angle_step_deg
-        forward_delta = -ry * self.spatial_step_mm
-        up_delta = hat_y * self.spatial_step_mm
+        # --- Arm-Steuerung ---
+        rotate_delta   = rx * self.angle_step_deg
+        forward_delta  = -ry * self.spatial_step_mm
+        up_delta       = hat_y * self.spatial_step_mm  # D-Pad up/down
 
         if abs(rotate_delta) > 1e-3 or abs(forward_delta) > 1e-3 or hat_y != 0:
             result = self.robot.execute_intuitive_move(
@@ -70,6 +71,7 @@ class XboxGamepadController:
             if not result.ok:
                 logger.warning(f"Arm move failed: {result.msg}")
 
+        # --- Base-Steuerung ---
         base_action = {
             "x.vel": -ly * self.base_speed_scale,
             "y.vel": (lt - rt) * self.base_speed_scale,
@@ -80,6 +82,7 @@ class XboxGamepadController:
         except Exception as e:
             logger.error(f"Base move failed: {e}")
 
+        # --- Gripper/Rotation über Buttons ---
         # X button -> rotate gripper left
         if self.gamepad.joystick.get_button(2):
             self.robot.execute_intuitive_move(
@@ -92,12 +95,12 @@ class XboxGamepadController:
                 rotate_gripper_clockwise_angle=self.angle_step_deg,
                 use_interpolation=False,
             )
-        # A button -> open gripper
+        # A button -> close gripper
         if self.gamepad.joystick.get_button(0):
-            self.robot.increment_joints_by_delta({"gripper": self.gripper_step_pct})
-        # B button -> close gripper
-        if self.gamepad.joystick.get_button(1):
             self.robot.increment_joints_by_delta({"gripper": -self.gripper_step_pct})
+        # B button -> open gripper
+        if self.gamepad.joystick.get_button(1):
+            self.robot.increment_joints_by_delta({"gripper": self.gripper_step_pct})
 
         # BACK button (6) to exit
         if self.gamepad.joystick.get_button(6):
