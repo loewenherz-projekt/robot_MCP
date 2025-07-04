@@ -51,8 +51,8 @@ class MoveResult:
 class RobotController:
     # Robot type mapping
     ROBOT_TYPES = {
-        "so100_follower": (SO100Follower, SO100FollowerConfig),
-        "so101_follower": (SO101Follower, SO101FollowerConfig),
+        "so100": (SO100Follower, SO100FollowerConfig),
+        "so101": (SO101Follower, SO101FollowerConfig),
         "lekiwi": (LeKiwiClient, LeKiwiClientConfig),
     }
 
@@ -165,7 +165,11 @@ class RobotController:
                 continue
                 
             norm_value = self._deg_to_norm(joint_name, deg_value)
-            norm_min, norm_max, deg_min, deg_max = self.motor_mapping[joint_name]
+
+            if joint_name == "gripper":
+                norm_min, norm_max = 0, 100
+            else:
+                norm_min, norm_max = -100, 100
             
             # Handle inverted ranges (where norm_min > norm_max)
             actual_min = min(norm_min, norm_max)
