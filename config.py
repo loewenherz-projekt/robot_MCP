@@ -10,14 +10,14 @@ from lerobot.common.cameras.opencv.configuration_opencv import OpenCVCameraConfi
 
 # Module-level constants
 DEFAULT_ROBOT_TYPE: Final[str] = "lekiwi" # "so100", "so101", "lekiwi"
-DEFAULT_SERIAL_PORT: Final[str] = "/dev/tty.usbmodem58FD0168731" # only for SO ARM
-DEFAULT_REMOTE_IP: Final[str] = "192.168.1.1" # only for LeKiwi
+DEFAULT_SERIAL_PORT: Final[str] = "/dev/ttyACM0" # only for SO ARM
+DEFAULT_REMOTE_IP: Final[str] = "192.168.178.111" # only for LeKiwi
 
 # Camera configuration constants
 # Can also be different for different cameras, set it in lerobot_config
 DEFAULT_CAMERA_FPS: Final[int] = 30
 DEFAULT_CAMERA_WIDTH: Final[int] = 640
-DEFAULT_CAMERA_HEIGHT: Final[int] = 360
+DEFAULT_CAMERA_HEIGHT: Final[int] = 240
 
 @dataclass
 class RobotConfig:
