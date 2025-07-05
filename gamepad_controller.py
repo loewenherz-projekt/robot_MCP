@@ -24,6 +24,9 @@ class XboxGamepadController:
         self.spatial_step_mm = 2.0
         self.angle_step_deg = 2.0
         self.gripper_step_pct = 3.0
+        # smoothing for analog sticks/triggers
+        self._axes_smooth = [0.0] * 6
+        self.smooth_factor = 0.2
 
     def start(self) -> None:
         self.gamepad.start()
@@ -47,7 +50,14 @@ class XboxGamepadController:
 
     def _handle_inputs(self) -> None:
         self.gamepad.update()
-        lx, ly, rx, ry, lt, rt = self.gamepad.get_axis_values()
+        raw_axes = self.gamepad.get_axis_values()
+        # exponential moving average for smoother commands
+        smoothed = []
+        for i, raw in enumerate(raw_axes):
+            val = self._axes_smooth[i] + self.smooth_factor * (raw - self._axes_smooth[i])
+            self._axes_smooth[i] = val
+            smoothed.append(val)
+        lx, ly, rx, ry, lt, rt = smoothed
 
         # Normalize triggers from [-1, 1] -> [0, 1]
         lt = (lt + 1.0) / 2.0
@@ -71,18 +81,24 @@ class XboxGamepadController:
                 move_gripper_forward_mm=forward_delta,
                 move_gripper_up_mm=up_delta,
                 rotate_robot_clockwise_angle=rotate_delta,
-                use_interpolation=False,
+                use_interpolation=True,
             )
             if not result.ok:
                 logger.warning(f"Arm move failed: {result.msg}")
 
         # --- Base-Steuerung ---
-        action = self.robot._build_action(self.robot.positions_deg)
-        action["x.vel"] = -ly * self.base_speed_scale
-        action["y.vel"] = -lx * self.base_speed_scale
-        action["theta.vel"] = 0.0
+        base_action = {
+            "x.vel": -ly * self.base_speed_scale,
+            "y.vel": (lt - rt) * self.base_speed_scale,
+            "theta.vel": -lx * self.base_rot_speed_deg,
+        }
+        # Deadzone für kleine Werte
+        for k, v in base_action.items():
+            if abs(v) < 1e-3:
+                base_action[k] = 0.0
+
         try:
-            self.robot.robot.send_action(action)
+            self.robot.robot.send_action(base_action)
         except Exception as e:
             logger.error(f"Base move failed: {e}")
 
@@ -91,13 +107,13 @@ class XboxGamepadController:
         if self.gamepad.joystick.get_button(2):
             self.robot.execute_intuitive_move(
                 rotate_gripper_clockwise_angle=-self.angle_step_deg,
-                use_interpolation=False,
+                use_interpolation=True,
             )
         # Y button -> rotate gripper right
         if self.gamepad.joystick.get_button(3):
             self.robot.execute_intuitive_move(
                 rotate_gripper_clockwise_angle=self.angle_step_deg,
-                use_interpolation=False,
+                use_interpolation=True,
             )
         # A button -> close gripper
         if self.gamepad.joystick.get_button(0):
