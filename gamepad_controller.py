@@ -18,6 +18,7 @@ class XboxGamepadController:
         self.robot = robot_controller
         self.gamepad = GamepadController()
         self.running = False
+        # speed/step constants
         self.base_speed_scale = 0.3    # m/s for linear x/y
         self.base_rot_speed_deg = 60.0 # deg/s for base rotation
         self.spatial_step_mm = 2.0
@@ -76,13 +77,12 @@ class XboxGamepadController:
                 logger.warning(f"Arm move failed: {result.msg}")
 
         # --- Base-Steuerung ---
-        base_action = {
-            "x.vel": -ly * self.base_speed_scale,
-            "y.vel": (lt - rt) * self.base_speed_scale,
-            "theta.vel": -lx * self.base_rot_speed_deg,
-        }
+        action = self.robot._build_action(self.robot.positions_deg)
+        action["x.vel"] = -ly * self.base_speed_scale
+        action["y.vel"] = -lx * self.base_speed_scale
+        action["theta.vel"] = 0.0
         try:
-            self.robot.robot.send_action(base_action)
+            self.robot.robot.send_action(action)
         except Exception as e:
             logger.error(f"Base move failed: {e}")
 

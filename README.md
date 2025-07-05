@@ -57,6 +57,13 @@ python keyboard_controller.py
 
 Now you can try to control the robot manually using the keyboard. Test it before moving on to the MCP step, to make sure it works properly.
 
+**🎮 Manual Gamepad Control:**
+```bash
+python gamepad_controller.py
+```
+
+An Xbox Series X controller over Bluetooth is supported. Ensure `pygame` is installed (included in `requirements.txt`) and the controller is paired with your system. The script drives the LeKiwi base with the left stick and the arm with the right stick.
+
 **🛠️ MCP server in the dev mode**
 ```bash
 mcp dev mcp_robot_server.py
