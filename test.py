@@ -15,15 +15,20 @@ logger = logging.getLogger(__name__)
 BUTTON_NAMES = {
     0: "A",
     1: "B",
-    2: "X",
-    3: "Y",
-    4: "LB",
+    2: "",
+    3: "X",
+    4: "Y",
     5: "RB",
-    6: "Back",
-    7: "Start",
+    6: "LB",
+    7: "LB",
     8: "Xbox",
-    9: "Left Stick Button",
-    10: "Right Stick Button"
+    9: "",
+    10: "Back",
+    11: "Start",
+    12: "XBox",
+    13: "Left Stick Button",
+    14: "Right Stick Button",
+    15: "Take Pic Btn"
     # ggf. erweitern!
 }
 
@@ -123,12 +128,12 @@ class XboxGamepadController:
                 logger.warning(f"Arm move failed: {result.msg}")
 
         # Button-Aktionen wie gehabt:
-        if self.gamepad.joystick.get_button(2):  # X
+        if self.gamepad.joystick.get_button(3):  # X
             self.robot.execute_intuitive_move(
                 rotate_gripper_clockwise_angle=-self.angle_step_deg,
                 use_interpolation=False,
             )
-        if self.gamepad.joystick.get_button(3):  # Y
+        if self.gamepad.joystick.get_button(4):  # Y
             self.robot.execute_intuitive_move(
                 rotate_gripper_clockwise_angle=self.angle_step_deg,
                 use_interpolation=False,
@@ -137,7 +142,7 @@ class XboxGamepadController:
             self.robot.increment_joints_by_delta({"gripper": -self.gripper_step_pct})
         if self.gamepad.joystick.get_button(1):  # B
             self.robot.increment_joints_by_delta({"gripper": self.gripper_step_pct})
-        if self.gamepad.joystick.get_button(6):  # Back
+        if self.gamepad.joystick.get_button(10):  # Back
             self.stop()
 
     def run(self) -> None:
