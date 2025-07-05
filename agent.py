@@ -129,6 +129,7 @@ class AIAgent:
         """Process user input with LLM with full agent logic."""
         system_prompt = """You are an AI assistant with access to tools. 
         Use them as needed to control a robot and complete tasks.
+        You can request more instruction and information using the tool.
         
         CRITICAL: Follow the user's instructions EXACTLY as given. Do not make assumptions about what the user wants based on what you see in images.
         
@@ -137,6 +138,7 @@ class AIAgent:
         Some tasks are simple - just complete them and stop. Some tasks are complex - move step by step, evaluate the results of your action after each step.
         Make sure that the step is successfully completed before moving to the next step.
         After each step ask yourself what was the original user's task and where do you stand now.
+        Generate short summary about the recent action and the RELATIVE positions of all important objects you can see.
         """
         
         self.conversation_history.append({"role": "user", "content": user_input})
@@ -194,7 +196,7 @@ class AIAgent:
                 if image_parts and self.image_viewer:
                     self.image_viewer.update(image_parts)
 
-                self.conversation_history.append({"role": "user", "content": tool_results_with_images})
+                self.conversation_history.append({"role": "tool", "content": tool_results_with_images})
 
             except Exception as e:
                 print(f"❌ Error in agent loop: {str(e)}")

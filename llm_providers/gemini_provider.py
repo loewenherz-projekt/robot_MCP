@@ -50,20 +50,52 @@ class GeminiProvider(LLMProvider):
             if role == "system":
                 continue
             
-            # Handle tool results
+            # Handle tool results - convert to function responses for Gemini
             if role == "tool":
-                # For Gemini, tool results are sent as function responses
-                formatted_messages.append(
-                    types.Content(
-                        role="function",
-                        parts=[
-                            types.Part.from_function_response(
-                                name=msg.get("name", "unknown"),
-                                response={"result": content}
-                            )
-                        ]
+                if isinstance(content, list):
+                    parts = []
+                    for part in content:
+                        if isinstance(part, dict):
+                            if part.get("type") == "tool_result":
+                                # Convert tool result to function response for Gemini
+                                parts.append(
+                                    types.Part.from_function_response(
+                                        name=part.get("tool_name", "unknown"),
+                                        response={"result": part.get("content", "")}
+                                    )
+                                )
+                            elif part.get("type") == "text":
+                                parts.append(types.Part(text=part["text"]))
+                            elif part.get("type") == "image":
+                                # Handle image content
+                                source = part.get("source", {})
+                                if source.get("type") == "base64":
+                                    parts.append(
+                                        types.Part.from_bytes(
+                                            data=source["data"],
+                                            mime_type=source["media_type"]
+                                        )
+                                    )
+                        else:
+                            parts.append(types.Part(text=str(part)))
+                    
+                    if parts:
+                        formatted_messages.append(
+                            types.Content(role="function", parts=parts)
+                        )
+                else:
+                    # Simple string content
+                    formatted_messages.append(
+                        types.Content(
+                            role="function",
+                            parts=[
+                                types.Part.from_function_response(
+                                    name="unknown",
+                                    response={"result": content}
+                                )
+                            ]
+                        )
                     )
-                )
                 continue
             
             # Handle assistant messages with tool calls
@@ -145,6 +177,58 @@ class GeminiProvider(LLMProvider):
         
         return image_count
     
+    def format_tool_results_for_conversation(self, tool_calls: List[Dict[str, Any]], tool_outputs: List[List[Dict[str, Any]]]) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+        """Format tool results for Gemini conversation history."""
+        tool_results_with_images = []
+        image_parts = []
+        
+        for tool_call, tool_output_parts in zip(tool_calls, tool_outputs):
+            text_parts = []
+            current_image_parts = []
+
+            for part in tool_output_parts:
+                if part['type'] == 'image':
+                    current_image_parts.append(part)
+                    image_parts.append(part)
+                elif part['type'] == 'text':
+                    # Try to parse as JSON first to format it nicely
+                    try:
+                        json_data = json.loads(part['text'])
+                        text_parts.append(json.dumps(json_data, indent=2))
+                    except (json.JSONDecodeError, KeyError):
+                        text_parts.append(part.get('text', str(part)))
+                else:
+                    # Handle other types (like dict objects from MCP)
+                    if isinstance(part, dict) and part.get('type') != 'image':
+                        # This might be the JSON data directly
+                        if any(key in part for key in ['robot_state', 'message', 'status']):
+                            text_parts.append(json.dumps(part, indent=2))
+                        else:
+                            text_parts.append(str(part))
+                    else:
+                        text_parts.append(str(part))
+            
+            # Create the tool result in the standard format
+            result_content = "\n".join(text_parts) if text_parts else "Tool executed successfully."
+            
+            # Store tool name for Gemini-specific formatting later
+            tool_results_with_images.append({
+                "type": "tool_result",
+                "tool_use_id": tool_call["id"],
+                "tool_name": tool_call["name"],  # Store tool name for Gemini
+                "content": result_content
+            })
+            
+            # Add images
+            for i, image_part in enumerate(current_image_parts, 1):
+                tool_results_with_images.append({
+                    "type": "text",
+                    "text": f"Image {i} from {tool_call['name']}:"
+                })
+                tool_results_with_images.append(image_part)
+        
+        return tool_results_with_images, image_parts
+
     async def generate_response(
         self,
         messages: List[Dict[str, Any]],
