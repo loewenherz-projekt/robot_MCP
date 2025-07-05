@@ -104,7 +104,7 @@ class XboxGamepadController:
         self._print_input_events()  # Zeige alle Änderungen an!
 
         # Restlicher Steuerungs-Code wie gehabt:
-        lx, ly, rx, ry, _, _ = self.gamepad.get_axis_values()
+        lx, ly, rx, ry, lt, rt = self.gamepad.get_axis_values()
 
         base_action = {
             "x.vel": -ly * self.base_speed_scale,
