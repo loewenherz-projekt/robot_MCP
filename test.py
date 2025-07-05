@@ -11,6 +11,22 @@ from robot_controller import RobotController
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
+# Mapping von Button-Nummern zu Namen (ggf. anpassen falls dein Mapping anders ist)
+BUTTON_NAMES = {
+    0: "A",
+    1: "B",
+    2: "X",
+    3: "Y",
+    4: "LB",
+    5: "RB",
+    6: "BACK",
+    7: "START",
+    8: "Guide",
+    9: "Left Stick",
+    10: "Right Stick"
+    # ggf. erweitern je nach Controller
+}
+
 class XboxGamepadController:
     """Control robot using an Xbox Series X Bluetooth gamepad."""
 
@@ -22,6 +38,8 @@ class XboxGamepadController:
         self.spatial_step_mm = 2.0
         self.angle_step_deg = 2.0
         self.gripper_step_pct = 3.0
+        # Neu: Merke dir alten Button-Status
+        self.last_button_state = [0] * 12  # Passe die Länge ggf. an deine Anzahl Buttons an
 
     def start(self) -> None:
         self.gamepad.start()
@@ -41,8 +59,21 @@ class XboxGamepadController:
             self.gamepad.stop()
             print("\n🛑 Gamepad controller stopped")
 
+    def _print_button_events(self):
+        # Prüfe alle Buttons und gib Statusänderung aus
+        for i in range(len(self.last_button_state)):
+            pressed = self.gamepad.joystick.get_button(i)
+            if pressed != self.last_button_state[i]:
+                if pressed:
+                    print(f"Controller Button pressed: {BUTTON_NAMES.get(i, f'Button {i}')}")
+                else:
+                    print(f"Controller Button released: {BUTTON_NAMES.get(i, f'Button {i}')}")
+                self.last_button_state[i] = pressed
+
     def _handle_inputs(self) -> None:
         self.gamepad.update()
+        self._print_button_events()  # NEU: Button-Änderungen immer anzeigen
+
         lx, ly, rx, ry, _, _ = self.gamepad.get_axis_values()
 
         base_action = {
@@ -56,7 +87,7 @@ class XboxGamepadController:
             logger.error(f"Base move failed: {e}")
 
         arm_move = False
-        rotate_delta = self.angle_step_deg
+        rotate_delta = rx * self.angle_step_deg
         forward_delta = -ry * self.spatial_step_mm
         if abs(rotate_delta) > 1e-3 or abs(forward_delta) > 1e-3:
             arm_move = True
