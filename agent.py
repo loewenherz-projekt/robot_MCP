@@ -34,7 +34,7 @@ from typing import Dict, List, Any
 
 from mcp import ClientSession
 from mcp.client.sse import sse_client
-from llm_providers import create_llm_provider
+from llm_providers.factory import create_llm_provider
 
 try:
     from agent_utils import ImageViewer
@@ -153,7 +153,7 @@ class AIAgent:
                 
                 response = await self.llm_provider.generate_response(
                     messages=[{"role": "system", "content": system_prompt}] + self.conversation_history,
-                    tools=self.llm_provider.format_tools_for_llm(self.tools),
+                    tools=self.llm_provider.format_tools(self.tools),
                     temperature=temperature,
                     thinking_enabled=thinking_enabled,
                     thinking_budget=self.thinking_budget
@@ -184,19 +184,32 @@ class AIAgent:
                 if not response.tool_calls:
                     return response.content or ""
 
-                self.conversation_history = self._filter_images_from_conversation(self.conversation_history)
-
                 tool_calls = self.llm_provider.format_tool_calls_for_execution(response.tool_calls)
                 
                 tool_outputs = []
                 for tool_call in tool_calls:
+                    print(f"🔧 Calling {tool_call['name']} with params: {tool_call['input']}")
                     tool_output_parts = await self.execute_mcp_tool(tool_call["name"], tool_call["input"])
                     tool_outputs.append(tool_output_parts)
                 
                 tool_results_with_images, image_parts = self.llm_provider.format_tool_results_for_conversation(tool_calls, tool_outputs)
 
+                # Only keep images from the last tool call (most recent images)
+                if image_parts and len(tool_outputs) > 1:
+                    # Get images only from the last tool output
+                    last_tool_images = []
+                    if tool_outputs:
+                        for part in tool_outputs[-1]:  # Last tool output
+                            if part.get('type') == 'image' and 'source' in part:
+                                last_tool_images.append(part)
+                    image_parts = last_tool_images
+
                 if image_parts and self.image_viewer:
                     self.image_viewer.update(image_parts)
+
+                # If we got response with images: remove ALL images from history and add new ones at the end
+                if image_parts:
+                    self.conversation_history = self._filter_images_from_conversation(self.conversation_history)
 
                 self.conversation_history.append({"role": "tool", "content": tool_results_with_images})
 
@@ -297,10 +310,6 @@ async def main():
         await agent.run_cli()
     except (ImportError, ValueError) as e:
         print(f"❌ {str(e)}")
-        print(f"\n💡 Tip: Create a .env file with your API keys:")
-        print(f"   ANTHROPIC_API_KEY=your_key_here")
-        print(f"   GEMINI_API_KEY=your_key_here")
-        print(f"   Or use: --api-key your_key_here")
         sys.exit(1)
 
 if __name__ == "__main__":

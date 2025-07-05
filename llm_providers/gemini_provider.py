@@ -4,6 +4,7 @@ Supports streaming, thinking, tool calling, and multimodal capabilities.
 """
 
 import json
+import os
 from typing import Dict, List, Any, Optional, AsyncIterator
 from google import genai
 from google.genai import types
@@ -13,7 +14,12 @@ from .base_provider import LLMProvider, LLMResponse
 class GeminiProvider(LLMProvider):
     """Gemini provider using native Google GenAI API."""
     
-    def __init__(self, api_key: str, model: str):
+    def __init__(self, api_key: Optional[str] = None, model: str = "gemini-2.5-flash"):
+        if not api_key:
+            api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            raise ValueError("GEMINI_API_KEY not found in environment variables or direct input.")
+        
         super().__init__(api_key, model)
         self.client = genai.Client(api_key=api_key)
     

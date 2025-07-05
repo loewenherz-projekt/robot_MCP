@@ -5,19 +5,18 @@
 A companion repository to my video about MCP server for the robot:
 - **MCP Server** for LLM-based AI agents (Claude Desktop, Cursor, Windsurf, etc.) to control the robot
 - **Direct keyboard control** for manual operation
+- **CLI AI Agent** can use it directly to control the robot with Claude, Gemini or GPT model
 
 If you want to know more about MCP refer to the [official MCP documentation](https://github.com/modelcontextprotocol/python-sdk)
 
 This repository suppose to work with the SO-ARM100 / 101 robots. Refer to [lerobot SO-101 setup guide](https://huggingface.co/docs/lerobot/so101) for the detailed instructions on how to setup the robot.
 
 Update! Now it partially supports [LeKiwi](https://github.com/SIGRobotics-UIUC/LeKiwi) (only arm, the mobile base control through MCP is TBD).
-I also added a simple agent that uses MCP server to control the robot with Claude. It is much more token efficient than many other agents as it is created specifically for this use case. Currently only works with Claude (other LLMs TBD).
+I also added a simple agent that uses MCP server to control the robot. It supports Claude, Gemini and GPT models. In my experience Claude is the best and GPT is not so good, Gemini is in between.
 
 After I released the video and this repository, LeRobot released a significant update of the library that breaks the compatibility with the original code.
 
 If you want to use the original code and exactly follow the video, please use [this release](https://github.com/IliaLarchenko/robot_MCP/tree/v0.0.1).
-
-The current version of the code works with the latest LeRobot version. It supports both SO-ARM100 and LeKiwi (arm only, not mobile base yet). I also did a very big refactoring of the code comparing to the original version discussed in the video.
 
 ## Quick Start
 
@@ -155,6 +154,7 @@ Create a `.env` file in the project root with your API keys:
 # API Keys (at least one required)
 ANTHROPIC_API_KEY=your_anthropic_api_key_here
 GEMINI_API_KEY=your_gemini_api_key_here
+OPENAI_API_KEY=your_openai_api_key_here
 
 # MCP Server Configuration (optional)
 MCP_SERVER_IP=127.0.0.1
@@ -196,6 +196,12 @@ python agent.py --mcp-server-ip 192.168.1.100 --mcp-port 3002
 - `gemini-2.5-flash`
 - `gemini-2.5-pro`
 - Use 2.5+ models as they support thinking feature
+
+**GPT (OpenAI):**
+- `gpt-4o` and variants
+- The rest of the models mostly don't support thinking or tool calling.
+
+Overall I didn't manage to get good results with GPT models.
 
 ### Parameters
 

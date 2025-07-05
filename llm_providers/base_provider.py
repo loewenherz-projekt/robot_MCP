@@ -13,13 +13,11 @@ class LLMResponse:
     """Response from LLM provider."""
     content: Optional[str] = None
     thinking: Optional[str] = None
-    tool_calls: List[Dict[str, Any]] = None
+    tool_calls: Optional[List[Dict[str, Any]]] = None
     provider: str = ""
     usage: Dict[str, Any] = None
     
     def __post_init__(self):
-        if self.tool_calls is None:
-            self.tool_calls = []
         if self.usage is None:
             self.usage = {}
 

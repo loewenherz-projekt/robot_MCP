@@ -4,6 +4,7 @@ Supports streaming, thinking, tool calling, and multimodal capabilities.
 """
 
 import json
+import os
 from typing import Dict, List, Any, Optional
 import anthropic
 from .base_provider import LLMProvider, LLMResponse
@@ -12,7 +13,12 @@ from .base_provider import LLMProvider, LLMResponse
 class ClaudeProvider(LLMProvider):
     """Claude provider using native Anthropic API."""
     
-    def __init__(self, api_key: str, model: str):
+    def __init__(self, api_key: Optional[str] = None, model: str = "claude-3-7-sonnet-latest"):
+        if not api_key:
+            api_key = os.getenv("ANTHROPIC_API_KEY")
+        if not api_key:
+            raise ValueError("ANTHROPIC_API_KEY not found in environment variables or direct input.")
+        
         super().__init__(api_key, model)
         self.client = anthropic.Anthropic(api_key=api_key)
     

@@ -3,17 +3,12 @@ Unit tests for AI agent.
 """
 
 import unittest
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
+from unittest.mock import Mock, patch, AsyncMock
 import asyncio
 import os
-import sys
-from typing import Dict, List, Any
 
-# Add project root to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from agent import AIAgent
-from llm_providers.base_provider import LLMResponse
+from agent import AIAgent, IMAGE_VIEWER_AVAILABLE
+from llm_providers.base_provider import LLMProvider, LLMResponse
 
 
 class TestAIAgent(unittest.TestCase):

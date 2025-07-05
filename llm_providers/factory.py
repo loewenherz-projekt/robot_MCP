@@ -4,16 +4,15 @@ Factory for creating LLM providers based on model names.
 
 import os
 from typing import Optional
-from .claude_provider import ClaudeProvider
-from .gemini_provider import GeminiProvider
+from .base_provider import LLMProvider
 
 
-def create_llm_provider(model: str, api_key: Optional[str] = None):
+def create_llm_provider(model_name: str, api_key: str = None) -> LLMProvider:
     """
     Create an LLM provider based on the model name.
     
     Args:
-        model: Model name (e.g., "claude-3-7-sonnet-latest", "gemini-2.5-flash")
+        model_name: Model name (e.g., "claude-3-7-sonnet-latest", "gemini-2.5-flash", "gpt", "o-series")
         api_key: Optional API key override
         
     Returns:
@@ -22,19 +21,19 @@ def create_llm_provider(model: str, api_key: Optional[str] = None):
     Raises:
         ValueError: If model is not supported or API key is missing
     """
-    model_lower = model.lower()
+    model_lower = model_name.lower()
     
     if "claude" in model_lower:
-        key = api_key or os.getenv("ANTHROPIC_API_KEY")
-        if not key:
-            raise ValueError("ANTHROPIC_API_KEY not found in environment variables")
-        return ClaudeProvider(key, model)
+        from .claude_provider import ClaudeProvider
+        return ClaudeProvider(api_key=api_key, model=model_name)
     
     elif "gemini" in model_lower:
-        key = api_key or os.getenv("GEMINI_API_KEY")
-        if not key:
-            raise ValueError("GEMINI_API_KEY not found in environment variables")
-        return GeminiProvider(key, model)
+        from .gemini_provider import GeminiProvider
+        return GeminiProvider(api_key=api_key, model=model_name)
+    
+    elif "gpt" in model_lower or model_lower.startswith('o1') or model_lower.startswith('o3') or model_lower.startswith('o4'):
+        from .openai_provider import OpenAIProvider
+        return OpenAIProvider(api_key=api_key, model=model_name)
     
     else:
-        raise ValueError(f"Unsupported model: {model}. Supported models: claude-*, gemini-*")
+        raise ValueError(f"Unsupported model provider for: {model_name}")
