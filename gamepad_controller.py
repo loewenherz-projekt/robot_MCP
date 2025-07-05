@@ -92,9 +92,11 @@ class XboxGamepadController:
             "y.vel": (lt - rt) * self.base_speed_scale,
             "theta.vel": -lx * self.base_rot_speed_deg,
         }
+        # Deadzone für kleine Werte
         for k, v in base_action.items():
             if abs(v) < 1e-3:
                 base_action[k] = 0.0
+
         try:
             self.robot.robot.send_action(base_action)
         except Exception as e:
