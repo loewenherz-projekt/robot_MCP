@@ -139,39 +139,77 @@ Now you can go to you Client and it should be able to control the robot when you
 
 ## Using the Agent
 
-Start the MCP server with the SSE transport
+Start the MCP server with the SSE transport:
 
 ```bash
 mcp run mcp_robot_server.py --transport sse
 ```
 
-Now you can use the agent to control the robot.
+Now you can use the AI agent to control the robot with natural language instructions.
+
+### Configuration
+
+Create a `.env` file in the project root with your API keys:
+
+```bash
+# API Keys (at least one required)
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+GEMINI_API_KEY=your_gemini_api_key_here
+
+# MCP Server Configuration (optional)
+MCP_SERVER_IP=127.0.0.1
+MCP_PORT=3001
+```
+
+### Basic Usage
 
 ```bash
 python agent.py
 ```
 
-You anthropic API key should either be set in the environment variable `ANTHROPIC_API_KEY` or passed as an argument to the agent.py script.
+### Advanced Usage
 
 ```bash
-python agent.py --api-key <your-anthropic-api-key>
+# Use Gemini instead of Claude
+python agent.py --model gemini-2.5-flash
+
+# Override API key
+python agent.py --api-key your_api_key_here
+
+# Enable image viewer window
+python agent.py --show-images
+
+# Increase thinking budget for better reasoning
+python agent.py --thinking-budget 2048
+
+# Custom MCP server location
+python agent.py --mcp-server-ip 192.168.1.100 --mcp-port 3002
 ```
 
-You can also specify the model to use and whether to show images received from the robot.
+### Supported Models (examples)
 
-```bash
-python agent.py --model <your-model> --show-images
-```
+**Claude (Anthropic):**
+- `claude-3-7-sonnet-latest` (default)
+- All models support thinking, streaming, and multimodal tool results
 
-Other arguments:
---mcp-server-ip - MCP server address, default is 127.0.0.1
---mcp-port - MCP server port, default is 3001
---thinking-budget - Claude thinking budget in tokens, default is 1024 (it is minimum). Higher leads to better reasoning but it is slower and more expensive.
---thinking-every-n - Use thinking every n steps, default is 3.
+**Gemini (Google):**
+- `gemini-2.5-flash`
+- `gemini-2.5-pro`
+- Use 2.5+ models as they support thinking feature
 
+### Parameters
 
-```bash
-python agent.py --mcp-server-ip <your-mcp-host> --mcp-port <your-mcp-port> --thinking-budget <your-thinking-budget> --thinking-every-n <your-thinking-every-n>
-```
+- `--model`: LLM model to use (default: claude-3-7-sonnet-latest)
+- `--api-key`: API key override (uses .env file by default)
+- `--show-images`: Display robot camera images in a window
+- `--thinking-budget`: Thinking tokens budget (default: 1024, 0 to disable)
+- `--thinking-every-n`: Use thinking every N steps (default: 3)
+- `--mcp-server-ip`: MCP server IP address (default: 127.0.0.1)
+- `--mcp-port`: MCP server port (default: 3001)
 
-0 budget will disable thinking, it is the fastest and cheapest option but the success rate will drop a lot in this case. It will mostly work for direct simple instructions but can struggle with complex tasks.
+### Cost Considerations
+
+**Token Usage:**
+- Claude counts MCP images in input tokens (more expensive for vision tasks)
+- Gemini doesn't count MCP images in tokens (token usage will be displayed only for text)
+- Thinking tokens add to the cost but improve reasoning quality
