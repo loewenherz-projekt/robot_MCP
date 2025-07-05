@@ -18,8 +18,7 @@ class XboxGamepadController:
         self.robot = robot_controller
         self.gamepad = GamepadController()
         self.running = False
-        self.base_speed_scale = 0.3  # m/s for linear x/y
-        self.base_rot_speed_deg = 60.0  # deg/s for base rotation
+        self.base_speed_scale = 0.3
         self.spatial_step_mm = 2.0
         self.angle_step_deg = 2.0
         self.gripper_step_pct = 3.0
@@ -29,10 +28,8 @@ class XboxGamepadController:
         self.running = True
         print("\n" + "="*50)
         print("🎮 GAMEPAD CONTROLLER ACTIVE")
-        print("Left stick:    Base forward/back & rotate")
-        print("Triggers:      Base strafe left/right")
-        print("D-Pad:         Arm up/down")
-        print("Right stick:   Arm forward/back & rotate")
+        print("Left stick:    Base X/Y")
+        print("Right stick:   Arm rotation/forward")
         print("X/Y buttons:   Rotate gripper left/right")
         print("A/B buttons:   Close/Open gripper")
         print("BACK button:   Exit")
@@ -46,39 +43,30 @@ class XboxGamepadController:
 
     def _handle_inputs(self) -> None:
         self.gamepad.update()
-        lx, ly, rx, ry, lt, rt = self.gamepad.get_axis_values()
-
-        hat_x, hat_y = 0, 0
-        if hasattr(self.gamepad.joystick, "get_hat"):
-            try:
-                hat_x, hat_y = self.gamepad.joystick.get_hat(0)
-            except Exception:
-                hat_x, hat_y = 0, 0
-
-        # Arm control first so base command isn't overwritten
-        rotate_delta = rx * self.angle_step_deg
-        forward_delta = -ry * self.spatial_step_mm
-        up_delta = hat_y * self.spatial_step_mm
-
-        if abs(rotate_delta) > 1e-3 or abs(forward_delta) > 1e-3 or hat_y != 0:
-            result = self.robot.execute_intuitive_move(
-                move_gripper_forward_mm=forward_delta,
-                move_gripper_up_mm=up_delta,
-                rotate_robot_clockwise_angle=rotate_delta,
-                use_interpolation=False,
-            )
-            if not result.ok:
-                logger.warning(f"Arm move failed: {result.msg}")
+        lx, ly, rx, ry, _, _ = self.gamepad.get_axis_values()
 
         base_action = {
             "x.vel": -ly * self.base_speed_scale,
-            "y.vel": (lt - rt) * self.base_speed_scale,
-            "theta.vel": -lx * self.base_rot_speed_deg,
+            "y.vel": -lx * self.base_speed_scale,
+            "theta.vel": 0.0,
         }
         try:
             self.robot.robot.send_action(base_action)
         except Exception as e:
             logger.error(f"Base move failed: {e}")
+
+        arm_move = False
+        rotate_delta = rx * self.angle_step_deg
+        forward_delta = -ry * self.spatial_step_mm
+        if abs(rotate_delta) > 1e-3 or abs(forward_delta) > 1e-3:
+            arm_move = True
+            result = self.robot.execute_intuitive_move(
+                move_gripper_forward_mm=forward_delta,
+                rotate_robot_clockwise_angle=rotate_delta,
+                use_interpolation=False,
+            )
+            if not result.ok:
+                logger.warning(f"Arm move failed: {result.msg}")
 
         # X button -> rotate gripper left
         if self.gamepad.joystick.get_button(2):
@@ -92,12 +80,12 @@ class XboxGamepadController:
                 rotate_gripper_clockwise_angle=self.angle_step_deg,
                 use_interpolation=False,
             )
-        # A button -> open gripper
+        # A button -> close gripper
         if self.gamepad.joystick.get_button(0):
-            self.robot.increment_joints_by_delta({"gripper": self.gripper_step_pct})
-        # B button -> close gripper
-        if self.gamepad.joystick.get_button(1):
             self.robot.increment_joints_by_delta({"gripper": -self.gripper_step_pct})
+        # B button -> open gripper
+        if self.gamepad.joystick.get_button(1):
+            self.robot.increment_joints_by_delta({"gripper": self.gripper_step_pct})
 
         # BACK button (6) to exit
         if self.gamepad.joystick.get_button(6):
