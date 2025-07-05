@@ -130,6 +130,8 @@ class AIAgent:
         system_prompt = """You are an AI assistant with access to tools. 
         Use them as needed to control a robot and complete tasks.
         You can request more instruction and information using the tool.
+
+        Use robot position information e.g. look at the height to decide if you can grab the object on the ground.
         
         CRITICAL: Follow the user's instructions EXACTLY as given. Do not make assumptions about what the user wants based on what you see in images.
         
