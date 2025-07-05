@@ -56,7 +56,7 @@ class XboxGamepadController:
             logger.error(f"Base move failed: {e}")
 
         arm_move = False
-        rotate_delta = rx * self.angle_step_deg
+        rotate_delta = self.angle_step_deg
         forward_delta = -ry * self.spatial_step_mm
         if abs(rotate_delta) > 1e-3 or abs(forward_delta) > 1e-3:
             arm_move = True
