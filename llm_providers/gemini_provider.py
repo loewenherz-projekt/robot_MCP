@@ -272,7 +272,7 @@ class GeminiProvider(LLMProvider):
         
         # Add tools if provided
         if tools:
-            config_params["tools"] = self.format_tools(tools)
+            config_params["tools"] = tools
         
         # Add system instruction if present
         if system_message:
