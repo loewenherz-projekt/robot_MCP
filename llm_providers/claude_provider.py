@@ -99,7 +99,7 @@ class ClaudeProvider(LLMProvider):
                 return msg["content"]
         return None
     
-    async def generate_response(
+    async def _generate_response_impl(
         self,
         messages: List[Dict[str, Any]],
         tools: Optional[List[Dict[str, Any]]] = None,
@@ -135,90 +135,80 @@ class ClaudeProvider(LLMProvider):
                 "budget_tokens": thinking_budget
             }
         
-        try:
-            # Use streaming API
-            with self.client.messages.stream(**stream_params) as stream:
-                thinking_started = False
-                response_started = False
-                response_content = []
-                thinking_content = []
-                tool_calls = []
-                usage_info = {}
-                
-                for event in stream:
-                    if event.type == "message_start":
-                        # Extract usage info from message start
-                        if hasattr(event.message, 'usage'):
-                            usage_info = {
-                                "input_tokens": event.message.usage.input_tokens,
-                                "output_tokens": 0,  # Will be updated later
-                                "total_tokens": event.message.usage.input_tokens
-                            }
-                            
-                    elif event.type == "content_block_start":
-                        thinking_started = False
-                        response_started = False
+        # Use streaming API
+        with self.client.messages.stream(**stream_params) as stream:
+            thinking_started = False
+            response_started = False
+            response_content = []
+            thinking_content = []
+            tool_calls = []
+            usage_info = {}
+            
+            for event in stream:
+                if event.type == "message_start":
+                    # Extract usage info from message start
+                    if hasattr(event.message, 'usage'):
+                        usage_info = {
+                            "input_tokens": event.message.usage.input_tokens,
+                            "output_tokens": 0,  # Will be updated later
+                            "total_tokens": event.message.usage.input_tokens
+                        }
                         
-                    elif event.type == "content_block_delta":
-                        if event.delta.type == "thinking_delta":
-                            if not thinking_started:
-                                self.print_thinking_header()
-                                thinking_started = True
-                            print(event.delta.thinking, end="", flush=True)
-                            thinking_content.append(event.delta.thinking)
-                            
-                        elif event.delta.type == "text_delta":
-                            if not response_started:
-                                if thinking_started:
-                                    print()  # New line after thinking
-                                self.print_response_header()
-                                response_started = True
-                            print(event.delta.text, end="", flush=True)
-                            response_content.append(event.delta.text)
-                            
-                    elif event.type == "content_block_stop":
-                        if thinking_started or response_started:
-                            print()  # New line after block
-                
-                # Get final message and extract tool calls
-                response = stream.get_final_message()
-                
-                # Extract tool calls from response
-                for block in response.content:
-                    if block.type == 'tool_use':
-                        tool_calls.append({
-                            "id": block.id,
-                            "type": "function",
-                            "function": {
-                                "name": block.name,
-                                "arguments": json.dumps(block.input)
-                            }
-                        })
-                
-                # Update usage information with final data
-                if hasattr(response, 'usage'):
-                    usage_info.update({
-                        "input_tokens": response.usage.input_tokens,
-                        "output_tokens": response.usage.output_tokens,
-                        "total_tokens": response.usage.input_tokens + response.usage.output_tokens
+                elif event.type == "content_block_start":
+                    thinking_started = False
+                    response_started = False
+                    
+                elif event.type == "content_block_delta":
+                    if event.delta.type == "thinking_delta":
+                        if not thinking_started:
+                            self.print_thinking_header()
+                            thinking_started = True
+                        print(event.delta.thinking, end="", flush=True)
+                        thinking_content.append(event.delta.thinking)
+                        
+                    elif event.delta.type == "text_delta":
+                        if not response_started:
+                            if thinking_started:
+                                print()  # New line after thinking
+                            self.print_response_header()
+                            response_started = True
+                        print(event.delta.text, end="", flush=True)
+                        response_content.append(event.delta.text)
+                        
+                elif event.type == "content_block_stop":
+                    if thinking_started or response_started:
+                        print()  # New line after block
+            
+            # Get final message and extract tool calls
+            response = stream.get_final_message()
+            
+            # Extract tool calls from response
+            for block in response.content:
+                if block.type == 'tool_use':
+                    tool_calls.append({
+                        "id": block.id,
+                        "type": "function",
+                        "function": {
+                            "name": block.name,
+                            "arguments": json.dumps(block.input)
+                        }
                     })
-                    # Add thinking tokens if available
-                    if hasattr(response.usage, 'thinking_tokens'):
-                        usage_info["thinking_tokens"] = response.usage.thinking_tokens
-                
-                return LLMResponse(
-                    content="".join(response_content),
-                    thinking="".join(thinking_content) if thinking_content else None,
-                    tool_calls=tool_calls,
-                    provider=self.provider_name,
-                    usage=usage_info
-                )
-                
-        except Exception as e:
-            print(f"❌ Claude API Error: {str(e)}")
+            
+            # Update usage information with final data
+            if hasattr(response, 'usage'):
+                usage_info.update({
+                    "input_tokens": response.usage.input_tokens,
+                    "output_tokens": response.usage.output_tokens,
+                    "total_tokens": response.usage.input_tokens + response.usage.output_tokens
+                })
+                # Add thinking tokens if available
+                if hasattr(response.usage, 'thinking_tokens'):
+                    usage_info["thinking_tokens"] = response.usage.thinking_tokens
+            
             return LLMResponse(
-                content=f"API Error: {str(e)}",
-                thinking=None,
-                tool_calls=[],
-                provider=self.provider_name
+                content="".join(response_content),
+                thinking="".join(thinking_content) if thinking_content else None,
+                tool_calls=tool_calls,
+                provider=self.provider_name,
+                usage=usage_info
             ) 

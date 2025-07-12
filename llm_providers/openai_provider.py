@@ -278,7 +278,7 @@ class OpenAIProvider(LLMProvider):
 
         return {"role": role, "content": content}
 
-    async def generate_response(self,
+    async def _generate_response_impl(self,
                                 messages: List[Dict[str, Any]],
                                 tools: List[Dict[str, Any]] = None,
                                 temperature: float = 0.1,

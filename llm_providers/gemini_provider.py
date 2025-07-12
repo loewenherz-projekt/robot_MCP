@@ -235,7 +235,7 @@ class GeminiProvider(LLMProvider):
         
         return tool_results_with_images, image_parts
 
-    async def generate_response(
+    async def _generate_response_impl(
         self,
         messages: List[Dict[str, Any]],
         tools: Optional[List[Dict[str, Any]]] = None,
@@ -280,100 +280,90 @@ class GeminiProvider(LLMProvider):
         
         config = types.GenerateContentConfig(**config_params)
         
-        try:
-            # Use streaming API
-            thinking_started = False
-            response_started = False
-            response_content = []
-            thinking_content = []
-            tool_calls = []
-            
-            # Track usage info
-            usage_info = {}
-            
-            # Generate streaming response
-            stream = self.client.models.generate_content_stream(
-                model=self.model,
-                contents=formatted_messages,
-                config=config
-            )
-            
-            for chunk in stream:
-                if chunk.candidates and len(chunk.candidates) > 0:
-                    candidate = chunk.candidates[0]
-                    
-                    # Extract usage information from chunks
-                    if hasattr(chunk, 'usage_metadata') and chunk.usage_metadata:
-                        usage_info = {
-                            "input_tokens": getattr(chunk.usage_metadata, 'prompt_token_count', 0),
-                            "output_tokens": getattr(chunk.usage_metadata, 'candidates_token_count', 0),
-                            "total_tokens": getattr(chunk.usage_metadata, 'total_token_count', 0)
-                        }
-                        # Add thinking tokens if available
-                        if hasattr(chunk.usage_metadata, 'thoughts_token_count'):
-                            usage_info["thinking_tokens"] = chunk.usage_metadata.thoughts_token_count
-                    
-                    if candidate.content and candidate.content.parts:
-                        for part in candidate.content.parts:
-                            # Handle thinking content
-                            if hasattr(part, 'thought') and part.thought:
-                                if not thinking_started:
-                                    self.print_thinking_header()
-                                    thinking_started = True
-                                print(part.text, end="", flush=True)
-                                thinking_content.append(part.text)
+        # Use streaming API
+        thinking_started = False
+        response_started = False
+        response_content = []
+        thinking_content = []
+        tool_calls = []
+        
+        # Track usage info
+        usage_info = {}
+        
+        # Generate streaming response
+        stream = self.client.models.generate_content_stream(
+            model=self.model,
+            contents=formatted_messages,
+            config=config
+        )
+        
+        for chunk in stream:
+            if chunk.candidates and len(chunk.candidates) > 0:
+                candidate = chunk.candidates[0]
+                
+                # Extract usage information from chunks
+                if hasattr(chunk, 'usage_metadata') and chunk.usage_metadata:
+                    usage_info = {
+                        "input_tokens": getattr(chunk.usage_metadata, 'prompt_token_count', 0),
+                        "output_tokens": getattr(chunk.usage_metadata, 'candidates_token_count', 0),
+                        "total_tokens": getattr(chunk.usage_metadata, 'total_token_count', 0)
+                    }
+                    # Add thinking tokens if available
+                    if hasattr(chunk.usage_metadata, 'thoughts_token_count'):
+                        usage_info["thinking_tokens"] = chunk.usage_metadata.thoughts_token_count
+                
+                if candidate.content and candidate.content.parts:
+                    for part in candidate.content.parts:
+                        # Handle thinking content
+                        if hasattr(part, 'thought') and part.thought:
+                            if not thinking_started:
+                                self.print_thinking_header()
+                                thinking_started = True
+                            print(part.text, end="", flush=True)
+                            thinking_content.append(part.text)
+                        
+                        # Handle text content
+                        elif hasattr(part, 'text') and part.text and not getattr(part, 'thought', False):
+                            if not response_started:
+                                if thinking_started:
+                                    print()  # New line after thinking
+                                self.print_response_header()
+                                response_started = True
                             
-                            # Handle text content
-                            elif hasattr(part, 'text') and part.text and not getattr(part, 'thought', False):
-                                if not response_started:
-                                    if thinking_started:
-                                        print()  # New line after thinking
-                                    self.print_response_header()
-                                    response_started = True
-                                
-                                # Clean up control characters and formatting artifacts
-                                clean_text = part.text.replace('<ctrl46>', '').replace('**', '')
-                                print(clean_text, end="", flush=True)
-                                response_content.append(clean_text)
+                            # Clean up control characters and formatting artifacts
+                            clean_text = part.text.replace('<ctrl46>', '').replace('**', '')
+                            print(clean_text, end="", flush=True)
+                            response_content.append(clean_text)
+                        
+                        # Handle function calls
+                        elif hasattr(part, 'function_call') and part.function_call:
+                            if not response_started:
+                                if thinking_started:
+                                    print()  # New line after thinking
+                                self.print_response_header()
+                                response_started = True
                             
-                            # Handle function calls
-                            elif hasattr(part, 'function_call') and part.function_call:
-                                if not response_started:
-                                    if thinking_started:
-                                        print()  # New line after thinking
-                                    self.print_response_header()
-                                    response_started = True
-                                
-                                # Convert function call to standard format
-                                tool_calls.append({
-                                    "id": f"call_{len(tool_calls)}",  # Generate ID
-                                    "type": "function",
-                                    "function": {
-                                        "name": part.function_call.name,
-                                        "arguments": json.dumps(dict(part.function_call.args))
-                                    }
-                                })
-            
-            if thinking_started or response_started:
-                print()  # Final newline
-            
-            # Add image count to usage info
-            if image_count > 0:
-                usage_info["image_count"] = image_count
-            
-            return LLMResponse(
-                content="".join(response_content),
-                thinking="".join(thinking_content) if thinking_content else None,
-                tool_calls=tool_calls,
-                provider=self.provider_name,
-                usage=usage_info
-            )
-            
-        except Exception as e:
-            print(f"❌ Gemini API Error: {str(e)}")
-            return LLMResponse(
-                content=f"API Error: {str(e)}",
-                thinking=None,
-                tool_calls=[],
-                provider=self.provider_name
-            ) 
+                            # Convert function call to standard format
+                            tool_calls.append({
+                                "id": f"call_{len(tool_calls)}",  # Generate ID
+                                "type": "function",
+                                "function": {
+                                    "name": part.function_call.name,
+                                    "arguments": json.dumps(dict(part.function_call.args))
+                                }
+                            })
+        
+        if thinking_started or response_started:
+            print()  # Final newline
+        
+        # Add image count to usage info
+        if image_count > 0:
+            usage_info["image_count"] = image_count
+        
+        return LLMResponse(
+            content="".join(response_content),
+            thinking="".join(thinking_content) if thinking_content else None,
+            tool_calls=tool_calls,
+            provider=self.provider_name,
+            usage=usage_info
+        ) 

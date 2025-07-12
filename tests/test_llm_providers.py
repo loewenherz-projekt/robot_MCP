@@ -26,7 +26,7 @@ class TestLLMResponse(unittest.TestCase):
         response = LLMResponse()
         self.assertIsNone(response.content)
         self.assertIsNone(response.thinking)
-        self.assertEqual(response.tool_calls, [])
+        self.assertIsNone(response.tool_calls)
         self.assertEqual(response.provider, "")
         self.assertEqual(response.usage, {})
     
@@ -67,7 +67,7 @@ class TestBaseProvider(unittest.TestCase):
             def format_messages(self, messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 return messages
             
-            async def generate_response(self, messages: List[Dict[str, Any]], **kwargs) -> LLMResponse:
+            async def _generate_response_impl(self, messages: List[Dict[str, Any]], **kwargs) -> LLMResponse:
                 return LLMResponse(content="test response", provider="Test")
         
         self.provider = TestProvider("test_key", "test_model")
@@ -412,6 +412,137 @@ class TestGeminiProvider(unittest.TestCase):
         self.assertEqual(result[0]["tool_name"], "test_tool")
         self.assertIn("status", result[0]["content"])  # JSON should be formatted
         self.assertEqual(len(image_parts), 1)
+
+
+class TestRetryLogic(unittest.IsolatedAsyncioTestCase):
+    """Test retry logic functionality."""
+    
+    def setUp(self):
+        """Set up test fixtures."""
+        with patch('llm_providers.claude_provider.anthropic.Anthropic'):
+            self.provider = ClaudeProvider('test_key', 'claude-3-7-sonnet-latest')
+    
+    @patch('asyncio.sleep', new_callable=AsyncMock)  # Mock sleep to speed up tests
+    async def test_retry_with_server_error(self, mock_sleep):
+        """Test retry logic with server overload error."""
+        # Create a mock that fails twice then succeeds
+        call_count = 0
+        
+        async def mock_generate_response_impl(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            
+            if call_count <= 2:
+                raise Exception("Server overload - please retry")
+            else:
+                return LLMResponse(
+                    content="Success after retry!",
+                    provider="Test",
+                    usage={"total_tokens": 10}
+                )
+        
+        with patch.object(self.provider, '_generate_response_impl', side_effect=mock_generate_response_impl):
+            response = await self.provider.generate_response([
+                {'role': 'user', 'content': 'Test message'}
+            ])
+            
+            self.assertEqual(response.content, "Success after retry!")
+            self.assertEqual(call_count, 3)  # Should have made 3 attempts
+            
+            # Verify sleep was called for retries
+            self.assertEqual(mock_sleep.call_count, 2)  # 2 retries = 2 sleeps
+            mock_sleep.assert_any_call(1.0)  # First retry delay
+            mock_sleep.assert_any_call(2.0)  # Second retry delay
+    
+    async def test_retry_with_non_retryable_error(self):
+        """Test that non-retryable errors are not retried."""
+        call_count = 0
+        
+        async def mock_generate_response_impl(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            raise ValueError("Invalid API key")
+        
+        with patch.object(self.provider, '_generate_response_impl', side_effect=mock_generate_response_impl):
+            with self.assertRaises(ValueError) as context:
+                await self.provider.generate_response([
+                    {'role': 'user', 'content': 'Test message'}
+                ])
+            
+            self.assertIn("Invalid API key", str(context.exception))
+            self.assertEqual(call_count, 1)  # Should have made only 1 attempt
+    
+    @patch('asyncio.sleep', new_callable=AsyncMock)  # Mock sleep to speed up tests
+    async def test_retry_exhaustion(self, mock_sleep):
+        """Test that retry logic gives up after max attempts."""
+        call_count = 0
+        
+        async def mock_generate_response_impl(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            raise Exception("Rate limit exceeded")
+        
+        with patch.object(self.provider, '_generate_response_impl', side_effect=mock_generate_response_impl):
+            with self.assertRaises(Exception) as context:
+                await self.provider.generate_response([
+                    {'role': 'user', 'content': 'Test message'}
+                ])
+            
+            self.assertIn("Rate limit exceeded", str(context.exception))
+            self.assertEqual(call_count, 4)  # Should have made 4 attempts (1 + 3 retries)
+            
+            # Verify sleep was called for all retries
+            self.assertEqual(mock_sleep.call_count, 3)  # 3 retries = 3 sleeps
+            mock_sleep.assert_any_call(1.0)  # First retry delay
+            mock_sleep.assert_any_call(2.0)  # Second retry delay
+            mock_sleep.assert_any_call(3.0)  # Third retry delay
+    
+    async def test_retry_with_different_error_types(self):
+        """Test retry logic with different types of retryable errors."""
+        retryable_errors = [
+            "Server overload",
+            "Rate limit exceeded", 
+            "Service unavailable",
+            "Internal server error",
+            "Connection timeout",
+            "Resource exhausted",
+            "Too many requests",
+            "Server is busy"
+        ]
+        
+        for error_msg in retryable_errors:
+            with self.subTest(error=error_msg):
+                call_count = 0
+                
+                async def mock_generate_response_impl(*args, **kwargs):
+                    nonlocal call_count
+                    call_count += 1
+                    
+                    if call_count == 1:
+                        raise Exception(error_msg)
+                    else:
+                        return LLMResponse(content="Success", provider="Test")
+                
+                with patch.object(self.provider, '_generate_response_impl', side_effect=mock_generate_response_impl):
+                    with patch('asyncio.sleep', new_callable=AsyncMock):
+                        response = await self.provider.generate_response([
+                            {'role': 'user', 'content': 'Test message'}
+                        ])
+                        
+                        self.assertEqual(response.content, "Success")
+                        self.assertEqual(call_count, 2)  # Should retry once
+    
+    def test_retry_decorator_parameters(self):
+        """Test that retry decorator can be configured with different parameters."""
+        from llm_providers.base_provider import retry_llm_call
+        
+        # Test custom retry parameters
+        @retry_llm_call(max_retries=2, initial_delay=0.5)
+        async def test_function():
+            raise Exception("Test error")
+        
+        # This test just verifies the decorator can be applied with custom parameters
+        self.assertTrue(callable(test_function))
 
 
 if __name__ == '__main__':

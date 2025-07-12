@@ -3,9 +3,12 @@ Base LLM Provider interface and response classes.
 """
 
 import json
+import asyncio
+import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Callable
+from functools import wraps
 
 
 @dataclass
@@ -20,6 +23,57 @@ class LLMResponse:
     def __post_init__(self):
         if self.usage is None:
             self.usage = {}
+
+
+def retry_llm_call(max_retries: int = 5, initial_delay: float = 1.0):
+    """
+    Decorator to retry LLM calls with exponential backoff.
+    
+    Args:
+        max_retries: Maximum number of retry attempts (default: 3)
+        initial_delay: Initial delay in seconds (default: 1.0)
+    """
+    def decorator(func: Callable) -> Callable:
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            last_exception = None
+            
+            for attempt in range(max_retries + 1):  # +1 for initial attempt
+                try:
+                    return await func(*args, **kwargs)
+                except Exception as e:
+                    last_exception = e
+                    error_msg = str(e).lower()
+                    
+                    # Check if this is a retryable error
+                    retryable_errors = [
+                        'rate limit', 'overload', 'server', 'timeout', 'busy',
+                        'service unavailable', 'internal error', 'throttle',
+                        'quota', 'capacity', 'resource exhausted', 'too many requests',
+                        'connection', 'network', 'temporary', 'unavailable'
+                    ]
+                    
+                    is_retryable = any(keyword in error_msg for keyword in retryable_errors)
+                    
+                    if not is_retryable or attempt == max_retries:
+                        # Don't retry for non-retryable errors or if we've exhausted retries
+                        if attempt > 0:
+                            print(f"❌ Final attempt failed after {attempt} retries: {str(e)}")
+                        raise e
+                    
+                    # Calculate delay with exponential backoff
+                    delay = initial_delay * 2 ** (attempt)  # 1s, 2s, 4s, 8s, 16s
+                    
+                    print(f"⚠️  LLM call failed (attempt {attempt + 1}/{max_retries + 1}): {str(e)}")
+                    print(f"🔄 Retrying in {delay}s...")
+                    
+                    await asyncio.sleep(delay)
+            
+            # This should never be reached, but just in case
+            raise last_exception
+        
+        return wrapper
+    return decorator
 
 
 class LLMProvider(ABC):
@@ -79,7 +133,7 @@ class LLMProvider(ABC):
         """Format messages for the provider's API."""
         pass
     
-    @abstractmethod
+    @retry_llm_call(max_retries=5, initial_delay=1.0)
     async def generate_response(
         self,
         messages: List[Dict[str, Any]],
@@ -89,7 +143,27 @@ class LLMProvider(ABC):
         thinking_budget: int = 1024,
         max_tokens: int = 4096
     ) -> LLMResponse:
-        """Generate a response from the LLM."""
+        """Generate a response from the LLM with automatic retry logic."""
+        return await self._generate_response_impl(
+            messages=messages,
+            tools=tools,
+            temperature=temperature,
+            thinking_enabled=thinking_enabled,
+            thinking_budget=thinking_budget,
+            max_tokens=max_tokens
+        )
+    
+    @abstractmethod
+    async def _generate_response_impl(
+        self,
+        messages: List[Dict[str, Any]],
+        tools: Optional[List[Dict[str, Any]]] = None,
+        temperature: float = 0.1,
+        thinking_enabled: bool = False,
+        thinking_budget: int = 1024,
+        max_tokens: int = 4096
+    ) -> LLMResponse:
+        """Internal implementation of generate_response. Override this method in subclasses."""
         pass
     
     def print_thinking_header(self):
