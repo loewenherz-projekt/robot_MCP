@@ -1,10 +1,18 @@
+# LLM Providers
+anthropic
+google-generativeai
+openai
+# MCP
+mcp
+# Testing
+pylint
+# Robot control dependencies
 pynput>=1.7.6
-numpy>=1.24.0
 git+https://github.com/huggingface/lerobot.git#egg=lerobot
 feetech-servo-sdk>=1.0.0
 pillow>=9.0.0
-mcp>=1.0.0
 opencv-python>=4.9.0
-anthropic>=0.40.0
 Pillow>=10.0.0
+anthropic>=0.40.0
 pygame>=2.5.2
+python-dotenv

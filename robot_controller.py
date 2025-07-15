@@ -396,7 +396,7 @@ class RobotController:
         move_gripper_forward_mm: Optional[float] = None,
         tilt_gripper_down_angle: Optional[float] = None,
         rotate_gripper_clockwise_angle: Optional[float] = None,
-        rotate_robot_clockwise_angle: Optional[float] = None,
+        rotate_robot_right_angle: Optional[float] = None,
         use_interpolation: bool = True
     ) -> MoveResult:
         """Execute intuitive movement commands."""
@@ -433,8 +433,8 @@ class RobotController:
             target_positions["wrist_flex"] += tilt_gripper_down_angle
         if rotate_gripper_clockwise_angle is not None:
             target_positions["wrist_roll"] += rotate_gripper_clockwise_angle
-        if rotate_robot_clockwise_angle is not None:
-            target_positions["shoulder_pan"] += rotate_robot_clockwise_angle
+        if rotate_robot_right_angle is not None:
+            target_positions["shoulder_pan"] += rotate_robot_right_angle
         
         return self.set_joints_absolute(target_positions, use_interpolation)
 
