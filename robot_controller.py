@@ -127,13 +127,15 @@ class RobotController:
         try:
             self._connect_robot()
 
-            if self.robot_type != "lekiwi":
+            if self.robot_type == "lekiwi":
+                # Use the newly implemented disable_torque method for LeKiwi
+                self.robot.disable_torque()
+                logger.info(f"Connected to {self.robot_type} in READ-ONLY mode")
+                logger.info("🔓 TORQUE DISABLED: Robot can now be moved manually while monitoring positions")
+            else:
                 self.robot.bus.disable_torque()
                 logger.info(f"Connected to {self.robot_type} in READ-ONLY mode")
                 logger.info("🔓 TORQUE DISABLED: Robot can now be moved manually while monitoring positions")
-
-            else:
-                logger.warning("LeKiwi does not support remote torque disabling, you need to do it manually on the host.")
             
         except Exception as e:
             logger.error(f"Failed to connect to robot in read-only mode: {e}")
@@ -420,10 +422,24 @@ class RobotController:
                 target_positions["shoulder_lift"] = sl_target
                 target_positions["elbow_flex"] = ef_target
                 
-                # Wrist compensation
-                sl_change = sl_target - self.positions_deg["shoulder_lift"]
-                ef_change = ef_target - self.positions_deg["elbow_flex"]
-                target_positions["wrist_flex"] = self.positions_deg["wrist_flex"] - (sl_change - ef_change)
+                # Wrist compensation - maintain absolute gripper orientation (with damping)
+                # Calculate desired wrist angle to keep gripper orientation constant
+                # The gripper tilt in world coordinates is: wrist_flex + shoulder_lift - elbow_flex (see line 269-271)
+                current_gripper_tilt = self.positions_deg["wrist_flex"] + self.positions_deg["shoulder_lift"] - self.positions_deg["elbow_flex"]
+                ideal_wrist_flex = current_gripper_tilt - sl_target + ef_target
+                
+                # Apply damping factor to reduce wrist flex changes for smoother movement
+                wrist_flex_damping = 0.6  # Reduce wrist flex changes to 50% of calculated value
+                wrist_flex_change = ideal_wrist_flex - self.positions_deg["wrist_flex"]
+                target_positions["wrist_flex"] = self.positions_deg["wrist_flex"] + (wrist_flex_change * wrist_flex_damping)
+                
+                # Debug output for vertical movement
+                if move_gripper_up_mm is not None and move_gripper_up_mm != 0:
+                    print(f"DEBUG: Vertical movement {move_gripper_up_mm}mm")
+                    print(f"  Current: SL={self.positions_deg['shoulder_lift']:.1f}, EF={self.positions_deg['elbow_flex']:.1f}, WF={self.positions_deg['wrist_flex']:.1f}")
+                    print(f"  Target:  SL={sl_target:.1f}, EF={ef_target:.1f}, WF={target_positions['wrist_flex']:.1f}")
+                    print(f"  Ideal WF: {ideal_wrist_flex:.1f}°, Damped change: {wrist_flex_change * wrist_flex_damping:.1f}°")
+                    print(f"  Gripper tilt: {current_gripper_tilt:.1f}°")
                 
             except Exception as e:
                 return MoveResult(False, f"Kinematics error: {e}", robot_state=self._get_full_state())

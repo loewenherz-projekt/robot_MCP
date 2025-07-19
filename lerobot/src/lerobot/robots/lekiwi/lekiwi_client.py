@@ -328,6 +328,46 @@ class LeKiwiClient(Robot):
         action_sent["action"] = actions
         return action_sent
 
+    def disable_torque(self, motors: str | list[str] | None = None) -> None:
+        """Disable torque for specified motors via ZMQ command."""
+        if not self._is_connected:
+            raise DeviceNotConnectedError(
+                "LeKiwi is not connected. You need to run `robot.connect()` before disabling torque."
+            )
+        
+        # Send disable torque command via ZMQ
+        command = {
+            "action": "disable_torque",
+            "motors": motors
+        }
+        
+        try:
+            self.zmq_cmd_socket.send_json(command)
+            logging.info(f"Sent disable_torque command for motors: {motors}")
+        except Exception as e:
+            logging.error(f"Failed to send disable_torque command: {e}")
+            raise
+
+    def enable_torque(self, motors: str | list[str] | None = None) -> None:
+        """Enable torque for specified motors via ZMQ command."""
+        if not self._is_connected:
+            raise DeviceNotConnectedError(
+                "LeKiwi is not connected. You need to run `robot.connect()` before enabling torque."
+            )
+        
+        # Send enable torque command via ZMQ
+        command = {
+            "action": "enable_torque",
+            "motors": motors
+        }
+        
+        try:
+            self.zmq_cmd_socket.send_json(command)
+            logging.info(f"Sent enable_torque command for motors: {motors}")
+        except Exception as e:
+            logging.error(f"Failed to send enable_torque command: {e}")
+            raise
+
     def disconnect(self):
         """Cleans ZMQ comms"""
 

@@ -78,7 +78,18 @@ def main(cfg: LeKiwiHostMainConfig):
             try:
                 msg = host.zmq_cmd_socket.recv_string(zmq.NOBLOCK)
                 data = dict(json.loads(msg))
-                _action_sent = robot.send_action(data)
+                
+                # Handle torque control commands
+                if "action" in data and data["action"] == "disable_torque":
+                    robot.disable_torque(data.get("motors", None))
+                    logging.info(f"Disabled torque for motors: {data.get('motors', 'all arm motors')}")
+                elif "action" in data and data["action"] == "enable_torque":
+                    robot.enable_torque(data.get("motors", None))
+                    logging.info(f"Enabled torque for motors: {data.get('motors', 'all arm motors')}")
+                else:
+                    # Regular movement action
+                    _action_sent = robot.send_action(data)
+                
                 last_cmd_time = time.time()
                 watchdog_active = False
             except zmq.Again:

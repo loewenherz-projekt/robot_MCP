@@ -734,33 +734,60 @@ class MotorsBus(abc.ABC):
         expected_set = set(self.calibration)
         current_set = set(current)
 
+        # Debug: Log detailed motor comparison
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info("=== DETAILED CALIBRATION MISMATCH ANALYSIS ===")
+        logger.info(f"Expected motors: {sorted(expected_set)}")
+        logger.info(f"Current motors: {sorted(current_set)}")
+
         if expected_set != current_set:
             missing = sorted(expected_set - current_set)
             extra = sorted(current_set - expected_set)
             if missing:
                 msgs.append(f"missing motors {missing}")
+                logger.info(f"Missing motors: {missing}")
             if extra:
                 msgs.append(f"unexpected motors {extra}")
+                logger.info(f"Unexpected motors: {extra}")
 
         for motor in expected_set & current_set:
             exp = self.calibration[motor]
             cur = current[motor]
+            
+            # Debug: Log individual motor comparison
+            logger.info(f"Motor {motor}:")
+            logger.info(f"  Expected: range=[{exp.range_min}, {exp.range_max}], offset={getattr(exp, 'homing_offset', 0)}, drive_mode={getattr(exp, 'drive_mode', None)}")
+            logger.info(f"  Current:  range=[{cur.range_min}, {cur.range_max}], offset={getattr(cur, 'homing_offset', 0)}, drive_mode={getattr(cur, 'drive_mode', None)}")
+            
             if exp.range_min != cur.range_min or exp.range_max != cur.range_max:
                 msgs.append(
                     f"{motor} range mismatch (expected {exp.range_min}-{exp.range_max}, "
                     f"got {cur.range_min}-{cur.range_max})"
                 )
+                logger.info(f"  -> RANGE MISMATCH!")
+            else:
+                logger.info(f"  -> Range OK")
+                
             if getattr(exp, "homing_offset", 0) != getattr(cur, "homing_offset", 0):
                 msgs.append(
                     f"{motor} offset mismatch (expected {getattr(exp, 'homing_offset', 0)}, "
                     f"got {getattr(cur, 'homing_offset', 0)})"
                 )
+                logger.info(f"  -> OFFSET MISMATCH!")
+            else:
+                logger.info(f"  -> Offset OK")
+                
             if getattr(exp, "drive_mode", None) != getattr(cur, "drive_mode", None):
                 msgs.append(
                     f"{motor} drive mode mismatch (expected {getattr(exp, 'drive_mode', None)}, "
                     f"got {getattr(cur, 'drive_mode', None)})"
                 )
+                logger.info(f"  -> DRIVE MODE MISMATCH!")
+            else:
+                logger.info(f"  -> Drive mode OK")
 
+        logger.info("=== END DETAILED CALIBRATION MISMATCH ANALYSIS ===")
         return "; ".join(msgs) if msgs else "unknown mismatch"
 
     def record_ranges_of_motion(

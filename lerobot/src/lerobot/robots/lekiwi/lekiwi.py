@@ -116,6 +116,28 @@ class LeKiwi(Robot):
         if not self.is_calibrated and calibrate:
             reason = self.bus.calibration_mismatch_info()
             logger.info(f"{self} not calibrated: {reason}. Starting calibration.")
+            
+            # Debug: Print detailed calibration comparison
+            logger.info("=== CALIBRATION DEBUG INFO ===")
+            logger.info(f"Calibration file exists: {self.calibration_fpath.exists()}")
+            logger.info(f"Calibration file path: {self.calibration_fpath}")
+            
+            if self.calibration:
+                logger.info("Loaded calibration from file:")
+                for motor_name, cal in self.calibration.items():
+                    logger.info(f"  {motor_name}: range=[{cal.range_min}, {cal.range_max}], offset={cal.homing_offset}")
+            else:
+                logger.info("No calibration loaded from file")
+                
+            try:
+                current_cal = self.bus.read_calibration()
+                logger.info("Current motor calibration:")
+                for motor_name, cal in current_cal.items():
+                    logger.info(f"  {motor_name}: range=[{cal.range_min}, {cal.range_max}], offset={cal.homing_offset}")
+            except Exception as e:
+                logger.error(f"Failed to read current motor calibration: {e}")
+                
+            logger.info("=== END CALIBRATION DEBUG ===")
             self.calibrate()
 
         for cam in self.cameras.values():
@@ -400,6 +422,30 @@ class LeKiwi(Robot):
     def stop_base(self):
         self.bus.sync_write("Goal_Velocity", dict.fromkeys(self.base_motors, 0), num_retry=5)
         logger.info("Base motors stopped")
+
+    def disable_torque(self, motors: str | list[str] | None = None) -> None:
+        """Disable torque for specified motors or all arm motors by default."""
+        if not self.is_connected:
+            raise DeviceNotConnectedError(f"{self} is not connected.")
+        
+        # Default to arm motors only (base motors don't need torque disabling for manual movement)
+        if motors is None:
+            motors = self.arm_motors
+        
+        self.bus.disable_torque(motors)
+        logger.info(f"Torque disabled for motors: {motors}")
+
+    def enable_torque(self, motors: str | list[str] | None = None) -> None:
+        """Enable torque for specified motors or all arm motors by default."""
+        if not self.is_connected:
+            raise DeviceNotConnectedError(f"{self} is not connected.")
+        
+        # Default to arm motors only
+        if motors is None:
+            motors = self.arm_motors
+        
+        self.bus.enable_torque(motors)
+        logger.info(f"Torque enabled for motors: {motors}")
 
     def disconnect(self):
         if not self.is_connected:

@@ -11,7 +11,7 @@ from lerobot.cameras.opencv.configuration_opencv import OpenCVCameraConfig
 # Module-level constants
 DEFAULT_ROBOT_TYPE: Final[str] = "lekiwi" # "so100", "so101", "lekiwi"
 DEFAULT_SERIAL_PORT: Final[str] = "/dev/ttyACM0" # only for SO ARM
-DEFAULT_REMOTE_IP: Final[str] = "192.168.178.111" # only for LeKiwi
+DEFAULT_REMOTE_IP: Final[str] = "127.0.0.1" # only for LeKiwi
 
 # Camera configuration constants
 # Can also be different for different cameras, set it in lerobot_config
@@ -65,12 +65,12 @@ class RobotConfig:
     # You can use any 2 points per motor to interpolate, but wider range is better
     MOTOR_NORMALIZED_TO_DEGREE_MAPPING: Dict[str, Tuple[float, float, float, float]] = field(
         default_factory=lambda: {
-            "shoulder_pan":  (-91.7, 99.5, 0.0, 180.0),
-            "shoulder_lift": (-89.4, 99.4, 0, 180.0),
-            "elbow_flex":    (96.5, -92.7, 0, 180.0),
-            "wrist_flex":    (-90.0, 90.0, -90.0, 90.0),
-            "wrist_roll":    (100, -100, -90, 90),
-            "gripper":       (31.0, 100.0, 0.0, 100.0),
+            "shoulder_pan":  (-99.7, 100.0, -7.5, 180.5),
+            "shoulder_lift": (-99.9, 99.2, -10.0, 179.8),
+            "elbow_flex":    (99.4, -100.0, -2.7, 186.9),
+            "wrist_flex":    (-55.4, 58.7, -55.4, 58.7),
+            "wrist_roll":    (-41.7, 42.9, 46.6, -47.7),
+            "gripper":       (0.3, 100.0, -44.5, 100.0),
         }
     )
 
